@@ -11,7 +11,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const canSubmit = email.trim() !== "" && password !== "";
+  const hasEmail = email.trim() !== "";
+  const hasPassword = password !== "";
+  const canSubmit = hasEmail && hasPassword;
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -32,7 +34,9 @@ export default function LoginPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="이메일을 입력하세요."
-              className="h-[53px] w-full rounded-lg bg-gray-4 px-[25px] text-sm text-gray-1 outline-none placeholder:text-[#A8B0B9] focus:ring-2 focus:ring-primary/30"
+              className={`login-input h-[53px] w-full rounded-lg px-[25px] text-sm text-gray-1 outline-none placeholder:text-[#A8B0B9] transition-colors focus:ring-2 focus:ring-primary/30 ${
+                hasEmail ? "bg-third" : "bg-gray-4"
+              }`}
               autoComplete="email"
             />
           </label>
@@ -45,7 +49,9 @@ export default function LoginPage() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="비밀번호를 입력하세요."
-                className="h-[53px] w-full rounded-lg bg-gray-4 px-[25px] pr-14 text-sm text-gray-1 outline-none placeholder:text-[#A8B0B9] focus:ring-2 focus:ring-primary/30"
+                className={`login-input h-[53px] w-full rounded-lg px-[25px] pr-14 text-sm text-gray-1 outline-none placeholder:text-[#A8B0B9] transition-colors focus:ring-2 focus:ring-primary/30 ${
+                  hasPassword ? "bg-third" : "bg-gray-4"
+                }`}
                 autoComplete="current-password"
               />
               <button
@@ -70,7 +76,7 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          <Button type="submit" variant="primary" disabled={!canSubmit} className="-mt-0.5 h-[34px] w-full rounded-lg text-xs">
+          <Button type="submit" variant="primary" disabled={!canSubmit} className="-mt-0.5 h-12 w-full rounded-lg px-3 py-4 text-sm">
             로그인
           </Button>
         </form>
