@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Teamply",
-  description: "AI 협업 매니저 Teamply",
+  title: "LionKing",
+  description: "LionKing project management service",
 };
 
 export default function RootLayout({ children }) {
