@@ -8,6 +8,7 @@ export default function Checkbox({
   defaultChecked,
   onChange,
   disabled = false,
+  size = 32,
   className = "",
   ...props
 }) {
@@ -15,7 +16,7 @@ export default function Checkbox({
     <label
       className={`inline-flex w-fit cursor-pointer items-center gap-[9px] text-sm font-normal leading-[1.4] text-[#4E5968] has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 ${className}`}
     >
-      <span className="relative h-8 w-8 shrink-0">
+      <span className="relative shrink-0" style={{ width: size, height: size }}>
         <input
           type="checkbox"
           checked={checked}
@@ -30,8 +31,8 @@ export default function Checkbox({
           <Image
             src="/icons/common/bluecheck.svg"
             alt=""
-            width={32}
-            height={32}
+            width={size}
+            height={size}
           />
         </span>
       </span>
