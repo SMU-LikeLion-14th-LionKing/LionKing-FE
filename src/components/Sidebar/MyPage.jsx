@@ -6,7 +6,7 @@ export default function MyPage({ active = false }) {
       <SidebarItem
         title="마이페이지"
         icon="/icons/Sidebar/myPage.svg"
-        href="/?page=mypage"
+        href="/mypage"
         active={active}
       />
 
