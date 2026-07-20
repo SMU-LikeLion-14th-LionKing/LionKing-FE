@@ -95,3 +95,12 @@ body {
   margin: 0 auto;
   overflow-x: hidden;
 }
+
+/* Keep browser-saved credentials visually consistent with typed values. */
+.login-input:-webkit-autofill,
+.login-input:-webkit-autofill:hover,
+.login-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #000000;
+  -webkit-box-shadow: 0 0 0 1000px #e8f3ff inset;
+  box-shadow: 0 0 0 1000px #e8f3ff inset;
+}
