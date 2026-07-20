@@ -7,8 +7,8 @@ export default function BottomMenu() {
         <Image
           src="/icons/Sidebar/settings.svg"
           alt=""
-          width={24}
-          height={24}
+          width={20}
+          height={20}
         />
       </button>
 
@@ -17,8 +17,8 @@ export default function BottomMenu() {
           <Image
             src="/icons/Sidebar/alarm.svg"
             alt=""
-            width={24}
-            height={24}
+            width={18}
+            height={20}
           />
         </button>
 

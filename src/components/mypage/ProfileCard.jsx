@@ -52,12 +52,22 @@ function PasswordField({ label, value, onChange, placeholder }) {
 function PasswordChangeModal({ onClose, onConfirm }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswordMismatch, setShowPasswordMismatch] = useState(false);
   const hasBothPasswords = newPassword.length > 0 && confirmPassword.length > 0;
   const isPasswordMismatch = hasBothPasswords && newPassword !== confirmPassword;
 
+  const handlePasswordChange = (setter) => (event) => {
+    setter(event.target.value);
+    setShowPasswordMismatch(false);
+  };
+
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (!hasBothPasswords || isPasswordMismatch) return;
+    if (!hasBothPasswords) return;
+    if (isPasswordMismatch) {
+      setShowPasswordMismatch(true);
+      return;
+    }
     onConfirm(newPassword);
   };
 
@@ -67,9 +77,9 @@ function PasswordChangeModal({ onClose, onConfirm }) {
         <button type="button" onClick={onClose} className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-white text-lg leading-none text-primary shadow-sm" aria-label="비밀번호 변경 창 닫기">×</button>
         <h2 id="password-change-title" className="text-2xl font-bold text-gray-1">비밀번호 변경</h2>
         <div className="mt-6 space-y-5">
-          <PasswordField label="새 비밀번호" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="새 비밀번호를 입력하세요." />
-          <PasswordField label="새 비밀번호 확인" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="새 비밀번호를 입력하세요." />
-          {isPasswordMismatch && <p className="-mt-2 text-sm font-medium text-error">비밀번호가 일치하지 않습니다.</p>}
+          <PasswordField label="새 비밀번호" value={newPassword} onChange={handlePasswordChange(setNewPassword)} placeholder="새 비밀번호를 입력하세요." />
+          <PasswordField label="새 비밀번호 확인" value={confirmPassword} onChange={handlePasswordChange(setConfirmPassword)} placeholder="새 비밀번호를 입력하세요." />
+          {showPasswordMismatch && <p className="-mt-2 text-sm font-medium text-error">비밀번호가 일치하지 않습니다.</p>}
         </div>
         <button type="submit" disabled={!hasBothPasswords} className={`mt-7 h-13 w-full rounded-xl text-sm font-semibold ${hasBothPasswords ? "bg-primary text-white hover:bg-primary/90" : "cursor-not-allowed bg-[#e2e6eb] text-gray-3"}`}>비밀번호 변경</button>
       </form>
