@@ -43,6 +43,17 @@ function isSameDate(first, second) {
     && first.getDate() === second.getDate();
 }
 
+function getDefaultScheduleTimes(date) {
+  const now = new Date();
+  const start = new Date(date);
+  start.setHours(now.getHours() + 1, 0, 0, 0);
+
+  return {
+    start,
+    end: new Date(start.getTime() + 60 * 60 * 1000),
+  };
+}
+
 function DateTimePicker({ value, label, onCancel, onConfirm }) {
   const [draft, setDraft] = useState(() => new Date(value));
   const [visibleMonth, setVisibleMonth] = useState(
@@ -138,16 +149,9 @@ export default function CalendarScheduleModal({ date, onClose, onAdd }) {
   const [title, setTitle] = useState("");
   const [isAllDay, setIsAllDay] = useState(false);
   const [activePicker, setActivePicker] = useState(null);
-  const [startDate, setStartDate] = useState(() => {
-    const next = new Date(date);
-    next.setHours(9, 0, 0, 0);
-    return next;
-  });
-  const [endDate, setEndDate] = useState(() => {
-    const next = new Date(date);
-    next.setHours(10, 0, 0, 0);
-    return next;
-  });
+  const [defaultTimes] = useState(() => getDefaultScheduleTimes(date));
+  const [startDate, setStartDate] = useState(() => new Date(defaultTimes.start));
+  const [endDate, setEndDate] = useState(() => new Date(defaultTimes.end));
 
   const confirmDate = (nextDate) => {
     if (activePicker === "start") {
