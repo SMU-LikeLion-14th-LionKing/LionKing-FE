@@ -98,7 +98,6 @@ export default function CalendarSection() {
     [],
   );
   const hasMockEvents = currentMonth.getFullYear() === 2026 && currentMonth.getMonth() === 6;
-  const isCurrentMonth = today.getFullYear() === currentMonth.getFullYear() && today.getMonth() === currentMonth.getMonth();
   const monthLabel = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" }).format(currentMonth);
 
   const changeMonth = (amount) => setCurrentMonth((month) => new Date(month.getFullYear(), month.getMonth() + amount, 1));
@@ -126,9 +125,10 @@ export default function CalendarSection() {
           <div className="relative grid grid-cols-7">
             {calendarDays.map((date, index) => {
               const events = !date.muted && hasMockEvents ? eventsByDay.get(date.day) || [] : [];
-              const isToday = !date.muted && isCurrentMonth && date.day === today.getDate();
+              const isSelected = selectedDate
+                && getDateForCell(currentMonth, date).getTime() === startOfDay(selectedDate).getTime();
               return (
-                <button type="button" key={`${date.day}-${index}`} onClick={() => openScheduleModal(date)} className={`relative h-[123px] w-36 border-b border-gray-5 text-left ${index % 7 > 0 ? "border-l" : ""} ${index % 7 === 6 ? "border-r" : ""} ${date.muted ? "bg-[#f8f8f8]" : isToday ? "bg-[#e8e8e8]" : "bg-white"} hover:bg-third focus-visible:outline-2 focus-visible:outline-primary`}>
+                <button type="button" key={`${date.day}-${index}`} onClick={() => openScheduleModal(date)} className={`relative h-[123px] w-36 border-b border-gray-5 text-left ${index % 7 > 0 ? "border-l" : ""} ${index % 7 === 6 ? "border-r" : ""} ${isSelected ? "bg-[#e8e8e8]" : date.muted ? "bg-[#f8f8f8]" : "bg-white"} hover:bg-third focus-visible:outline-2 focus-visible:outline-primary`}>
                   <span className={`absolute left-3 top-3 text-[21px] font-medium leading-[140%] text-black ${date.muted ? "opacity-40" : "opacity-100"}`}>{date.day}</span>
                   <div className="absolute left-3 top-[53px] space-y-1">
                     {events.map((event) => <span key={event.label} className={`block w-fit max-w-full truncate rounded px-1.5 py-0.5 text-xs font-medium ${badgeStyles[event.tone]}`}>{event.label}</span>)}
