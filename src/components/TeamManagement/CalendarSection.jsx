@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { calendarEvents } from "@/constants/teamManagement";
+import { calendarEvents } from "@/constants/teammanagement";
 import CalendarScheduleModal from "./CalendarScheduleModal";
 
 const weekDays = ["일", "월", "화", "수", "목", "금", "토"];

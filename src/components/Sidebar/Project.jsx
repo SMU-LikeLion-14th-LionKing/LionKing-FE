@@ -28,8 +28,8 @@ export default function Project() {
       <SidebarItem
         title="라이온킹"
         icon="/icons/Sidebar/lion.svg"
-        href="/teamManagement"
-        active={pathname === "/teamManagement"}
+        href="/teammanagement"
+        active={pathname === "/teammanagement"}
       />
     </section>
   );

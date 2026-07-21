@@ -1,6 +1,6 @@
 "use client";
 
-import { memberList } from "@/constants/teamManagement";
+import { memberList } from "@/constants/teammanagement";
 import Image from "next/image";
 import { useState } from "react";
 import MemberCard from "./MemberCard";

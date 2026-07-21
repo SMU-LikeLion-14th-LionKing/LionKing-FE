@@ -1,4 +1,4 @@
-import { scheduleTimeline } from "@/constants/teamManagement";
+import { scheduleTimeline } from "@/constants/teammanagement";
 import ScheduleGroup from "./ScheduleGroup";
 
 export default function ScheduleSection() {

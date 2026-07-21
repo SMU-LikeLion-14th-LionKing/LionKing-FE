@@ -1,6 +1,6 @@
 "use client";
 
-import { workspaceList } from "@/constants/teamManagement";
+import { workspaceList } from "@/constants/teammanagement";
 import Image from "next/image";
 import { useState } from "react";
 import WorkspaceCard from "./WorkspaceCard";

@@ -1,5 +1,5 @@
 import Sidebar from "@/components/Sidebar/Sidebar";
-import TeamManagementLayout from "@/components/teamManagement/TeamManagementLayout";
+import TeamManagementLayout from "@/components/TeamManagement/TeamManagementLayout";
 
 export default function TeamManagementPage() {
   return (
