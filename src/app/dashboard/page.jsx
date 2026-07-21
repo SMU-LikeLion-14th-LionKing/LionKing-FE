@@ -1,13 +1,10 @@
 import Sidebar from "@/components/Sidebar/Sidebar";
-import TeamManagementLayout from "@/components/teamManagement/TeamManagementLayout";
 
 export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-white">
       <Sidebar />
-      <div className="ml-64 flex min-w-0">
-        <TeamManagementLayout />
-      </div>
+      <main className="ml-64 min-h-screen" />
     </div>
   );
 }

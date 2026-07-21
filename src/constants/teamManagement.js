@@ -7,8 +7,8 @@ export const calendarEvents = [
 ];
 
 export const workspaceList = [
-  { name: "Figma", mark: "F", color: "bg-[#242424] text-[#f24e1e]" },
-  { name: "GitHub", mark: "GH", color: "bg-gray-1 text-white" },
+  { name: "Figma", icon: "/icons/TeamManagement/figma.svg" },
+  { name: "GitHub", icon: "/icons/TeamManagement/github.svg" },
 ];
 
 export const memberList = [
