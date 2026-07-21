@@ -96,7 +96,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Keep browser-saved credentials visually consistent with typed values. */
 .login-input:-webkit-autofill,
 .login-input:-webkit-autofill:hover,
 .login-input:-webkit-autofill:focus {

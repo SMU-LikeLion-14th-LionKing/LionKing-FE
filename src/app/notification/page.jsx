@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import Button from "@/components/common/Button";
+import { useNotificationState } from "@/context/NotificationContext";
 
 const INITIAL_NOTIFICATIONS = [
   {
@@ -132,13 +133,18 @@ function NotificationItem({ notification }) {
 export default function NotificationPage() {
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [activeTab, setActiveTab] = useState("all");
-  const unreadCount = notifications.filter(
+  const { allNotificationsRead, markAllNotificationsRead } =
+    useNotificationState();
+  const syncedNotifications = allNotificationsRead
+    ? notifications.map((notification) => ({ ...notification, unread: false }))
+    : notifications;
+  const unreadCount = syncedNotifications.filter(
     (notification) => notification.unread,
   ).length;
   const visibleNotifications =
     activeTab === "unread"
-      ? notifications.filter((notification) => notification.unread)
-      : notifications;
+      ? syncedNotifications.filter((notification) => notification.unread)
+      : syncedNotifications;
   const groups = useMemo(
     () =>
       ["오늘", "어제", "2일 전"]
@@ -172,6 +178,7 @@ export default function NotificationPage() {
                 setNotifications((items) =>
                   items.map((item) => ({ ...item, unread: false })),
                 );
+                markAllNotificationsRead();
               }}
               className="!h-[45px] !w-[104px] rounded-[10px] !border-[#E5E8EB] !bg-white !px-6 py-3 text-base font-medium !text-black transition-colors hover:!bg-white active:!border-primary active:!bg-third active:!text-primary"
             >
