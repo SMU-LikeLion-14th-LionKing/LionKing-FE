@@ -28,8 +28,8 @@ export default function DashboardPosts() {
   };
 
   return (
-    <main className="min-w-0 flex-1 px-6 py-10 lg:px-12">
-      <div className="mx-auto max-w-[1090px]">
+    <main className="min-w-0 flex-1 bg-white p-5 sm:p-8 lg:p-10">
+      <div className="mx-auto w-full max-w-7xl">
         <div className="flex items-center justify-between"><h1 className="text-[32px] font-bold">게시글</h1><Link href="/posts/create" className="rounded-lg bg-primary px-5 py-3 font-semibold text-white">게시글 작성</Link></div>
         {posts.length === 0 ? <div className="mt-8 rounded-xl border border-gray-5 py-24 text-center text-gray-2">등록된 게시글이 없습니다.</div> : <div className="mt-8 space-y-5">{posts.map((post) => {
           const imageFile = (post.files ?? []).find((file) => imagePattern.test(file.name ?? file));
