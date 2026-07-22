@@ -43,7 +43,7 @@ export default function PostCreatePage() {
     if (!isValid) return;
     const storedPosts = JSON.parse(localStorage.getItem("lionking-posts") ?? "[]");
     const coverImage = files.find((file) => typeof file === "object" && file.preview)?.preview ?? null;
-    const post = { id: editId ?? generatedId, type, title: title.trim(), content: content.trim(), files: files.map((file) => typeof file === "string" ? { name: file } : file), coverImage, vote: type === "question" ? vote : null, meetingDate: type === "note" ? meetingDate?.toISOString() : null };
+    const post = { id: editId ?? generatedId, type, title: title.trim(), content: content.trim(), files: files.map((file) => typeof file === "string" ? { name: file } : file), coverImage, vote: type === "question" ? vote : null, meetingDate: type === "note" ? meetingDate?.toISOString() : null, createdAt: storedEdit?.createdAt ?? new Date().toISOString() };
     const nextPosts = editId ? storedPosts.map((item) => item.id === editId ? post : item) : [post, ...storedPosts];
     localStorage.setItem("lionking-posts", JSON.stringify(nextPosts));
     router.push("/dashboard");

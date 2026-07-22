@@ -27,7 +27,7 @@ export default function VoteCreatePage() {
   };
   const addVote = () => {
     if (!canAdd) return;
-    const vote = { question: question.trim(), multiple, candidates: candidates.map(({ text, image }) => ({ text: text.trim(), image })), deadline: deadline?.toISOString() ?? null };
+    const vote = { question: question.trim(), multiple, candidates: candidates.map(({ text, image }) => ({ text: text.trim(), image })), deadline: deadline?.toISOString() ?? null, responses: initialVote?.responses ?? [] };
     sessionStorage.setItem("lionking-post-draft", JSON.stringify({ ...postDraft, type: "question", vote }));
     const editId = searchParams.get("edit") ?? postDraft?.editId;
     router.push(`/posts/create?restore=1${editId ? `&edit=${encodeURIComponent(editId)}` : ""}`);
