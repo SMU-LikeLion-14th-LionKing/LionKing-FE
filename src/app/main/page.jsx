@@ -14,6 +14,7 @@ const svgIcons = {
   review: "/icons/main/review.svg",
   arrow: "/icons/main/arrow.svg",
   crown: "/icons/main/crown.svg",
+  comment: "/icons/main/comment.svg",
 };
 
 const posts = [
@@ -106,9 +107,7 @@ function NotificationIcon({ src, className = "" }) {
 }
 
 function CommentIcon() {
-  return (
-    <span className="inline-block h-[16px] w-[16px] rounded-full border-[1.5px] border-gray-1 after:block after:h-[5px] after:w-[5px] after:translate-x-[-2px] after:translate-y-[10px] after:rotate-[-25deg] after:border-b after:border-gray-1" />
-  );
+  return <SvgSlot name="comment" className="h-4 w-4" />;
 }
 
 function BoardHeader({ activeFilter, onFilterChange }) {

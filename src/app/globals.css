@@ -96,6 +96,25 @@ body {
   overflow-x: hidden;
 }
 
+.notification-scrollbar {
+  scrollbar-color: var(--color-gray-2) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.notification-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notification-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notification-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--color-gray-2);
+}
+
 .login-input:-webkit-autofill,
 .login-input:-webkit-autofill:hover,
 .login-input:-webkit-autofill:focus {
