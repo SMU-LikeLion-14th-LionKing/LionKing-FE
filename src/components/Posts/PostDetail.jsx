@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AiSuggestion from "./AiSuggestion";
 import { formatDateTime } from "./DateTimePicker";
@@ -37,6 +37,7 @@ function VotePanel({ vote, selections, onToggle, onSubmit, now }) {
 
 export default function PostDetail() {
   const { id } = useParams();
+  const router = useRouter();
   const [post, setPost] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [comments, setComments] = useState([]);
@@ -102,33 +103,39 @@ export default function PostDetail() {
     setPost(updatedPost);
   };
 
+  const removePost = () => {
+    const posts = JSON.parse(localStorage.getItem("lionking-posts") ?? "[]").filter((item) => String(item.id) !== String(post.id));
+    localStorage.setItem("lionking-posts", JSON.stringify(posts));
+    router.push("/dashboard");
+  };
+
   if (!loaded) return <main className="flex-1" />;
   if (!post) return <main className="flex flex-1 items-center justify-center"><div className="text-center"><p className="text-xl font-semibold">게시글을 찾을 수 없습니다.</p><Link href="/dashboard" className="mt-4 inline-block text-primary">목록으로 돌아가기</Link></div></main>;
 
   const image = post.coverImage ?? post.files?.find((file) => file?.preview)?.preview;
 
   return (
-    <main className="min-w-0 flex-1 p-5 sm:p-8 lg:p-10"><div className="mx-auto w-full max-w-7xl">
+    <main className="min-w-0 flex-1 p-5 sm:p-8 lg:p-10"><div className="mx-auto w-full max-w-[1106px]">
       <div className="flex items-center gap-3"><Image src="/icons/Sidebar/lion.svg" alt="" width={45} height={45} /><h1 className="text-[36px] font-bold">라이온킹</h1></div>
-      <article className="mt-10 rounded-xl border border-gray-5 p-7 lg:p-8"><div className={`grid gap-8 ${image ? "lg:grid-cols-[minmax(0,0.8fr)_minmax(380px,1.2fr)]" : ""}`}>
-        <div><span className="inline-flex rounded-full border border-primary px-3 py-1 text-sm font-medium">{typeLabels[post.type] ?? "게시글"}</span>
-          <div className="mt-4 flex items-center gap-3"><Avatar name="김멋사" index={2} /><strong className="text-xl">김멋사</strong><span className="text-sm">{elapsed(post.createdAt)}</span></div>
-          <h2 className="mt-6 text-2xl font-bold">{post.title}</h2><p className="mt-3 whitespace-pre-wrap text-lg leading-7">{post.content}</p>
+      <article className="relative mt-10 min-h-[355px] rounded-xl border border-gray-5 p-7 lg:p-8"><div className={`grid gap-8 ${image ? "lg:grid-cols-[minmax(0,0.8fr)_minmax(380px,1.2fr)] lg:gap-12" : ""}`}>
+        <div className="flex min-h-[291px] flex-col"><span className="inline-flex w-fit rounded-full border border-primary px-3 py-1 text-sm font-medium">{typeLabels[post.type] ?? "게시글"}</span>
+          <div className="mt-4 flex items-center gap-3"><Avatar name="김멋사" index={2} /><strong className="text-2xl font-medium">김멋사</strong><span className="text-sm font-normal">{elapsed(post.createdAt)}</span></div>
+          <h2 className="mt-6 text-2xl font-semibold">{post.title}</h2><p className="mt-3 whitespace-pre-wrap text-base font-normal leading-6">{post.content}</p>
           {(post.files ?? []).length > 0 && <div className="mt-5 flex flex-wrap gap-2">{post.files.map((file, index) => <span key={`${file.name}-${index}`} className="rounded-lg bg-gray-4 px-3 py-2 text-sm">📎 {file.name}</span>)}</div>}
-          <div className="mt-6 flex items-center gap-2"><span className="text-2xl">♡</span><span>{comments.length}</span></div>
+          <div className="mt-auto pt-6"><div className="flex items-center gap-2 text-base font-normal"><Image src="/icons/Posts/reply.svg" alt="댓글" width={18} height={18} /><span>{comments.length}</span></div><div className="mt-2 flex items-center gap-2 text-sm font-normal"><span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-gray-2 text-[9px] text-white">✓</span><span>검토중 {comments.length}</span></div></div>
         </div>
-        {image && <div className="flex min-h-[280px] items-center justify-center overflow-hidden bg-[#f4faf7]"><Image src={image} alt="게시글 첨부 이미지" width={720} height={430} unoptimized className="max-h-[430px] w-full object-contain" /></div>}
-      </div></article>
+        {image && <div className="flex min-h-[280px] items-center justify-center overflow-hidden bg-[#f4faf7] lg:mr-10 lg:mt-2"><Image src={image} alt="게시글 첨부 이미지" width={720} height={430} unoptimized className="max-h-[430px] w-full object-contain" /></div>}
+      </div><div className="absolute right-[15px] top-[15px]"><button type="button" onClick={() => setOpenMenu((current) => current === "post" ? null : "post")} aria-label="게시글 메뉴" className="flex h-6 w-7 cursor-pointer items-center justify-center"><Image src="/icons/Posts/more.svg" alt="" width={20} height={6} /></button>{openMenu === "post" && <div className="absolute right-0 top-8 z-20 w-[82px] overflow-hidden rounded-lg border border-gray-5 bg-white py-1 shadow-lg"><Link href={`/posts/create?edit=${encodeURIComponent(post.id)}`} className="flex h-8 items-center gap-1 px-2 text-[15px] font-medium hover:bg-gray-4"><Image src="/icons/common/edit.svg" alt="" width={22} height={22} />수정</Link><button type="button" onClick={removePost} className="flex h-8 w-full cursor-pointer items-center gap-1 px-2 text-[15px] font-medium text-[#FF0000] hover:bg-gray-4"><Image src="/icons/common/trash.svg" alt="" width={22} height={22} />삭제</button></div>}</div></article>
 
       {post.type === "question" && post.vote && <VotePanel vote={post.vote} selections={voteSelections} onToggle={toggleVoteSelection} onSubmit={submitVote} now={now} />}
 
-      <section className="mt-12"><h2 className="text-2xl font-bold">댓글 {comments.length}</h2><div className="mt-3 rounded-xl border border-gray-5 px-7">
-        {comments.length === 0 ? <p className="py-12 text-center text-gray-2">첫 댓글을 남겨보세요.</p> : comments.map((comment, index) => <div key={comment.id} className="relative flex gap-4 border-b border-gray-5 py-6 pr-12 last:border-b-0"><Avatar name={comment.author} index={index} /><div className="min-w-0 flex-1"><div className="flex items-center gap-4"><strong className="text-xl">{comment.author}</strong><span className="text-sm">{elapsed(comment.createdAt)}</span>{comment.updatedAt && <span className="text-sm text-gray-2">수정됨</span>}</div>
-          {editingId === comment.id ? <div className="mt-3"><textarea value={editingContent} onChange={(event) => setEditingContent(event.target.value)} autoFocus className="min-h-24 w-full resize-none rounded-lg border border-gray-5 p-3 text-lg outline-none focus:ring-2 focus:ring-primary" /><div className="mt-2 flex justify-end gap-2"><button type="button" onClick={() => { setEditingId(null); setEditingContent(""); }} className="cursor-pointer rounded-lg border border-gray-5 px-4 py-2">취소</button><button type="button" onClick={updateComment} disabled={!editingContent.trim()} className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-white disabled:cursor-not-allowed disabled:bg-gray-5">수정 완료</button></div></div> : <><p className="mt-2 whitespace-pre-wrap text-lg leading-7">{comment.content}</p><button type="button" className="mt-3 text-sm">답글</button></>}
-        </div><div className="absolute right-0 top-5"><button type="button" onClick={() => setOpenMenu((current) => current === comment.id ? null : comment.id)} aria-label={`${comment.author} 댓글 메뉴`} aria-expanded={openMenu === comment.id} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full hover:bg-gray-4"><Image src="/icons/Posts/more.svg" alt="" width={24} height={24} /></button>{openMenu === comment.id && <div className="absolute right-0 top-10 z-10 w-24 overflow-hidden rounded-lg border border-gray-5 bg-white py-1 shadow-lg"><button type="button" onClick={() => startEditing(comment)} className="w-full cursor-pointer px-4 py-2 text-center hover:bg-gray-4">수정</button><button type="button" onClick={() => removeComment(comment.id)} className="w-full cursor-pointer px-4 py-2 text-center text-error hover:bg-gray-4">삭제</button></div>}</div></div>)}
+      <section className="mt-12"><h2 className="text-xl font-semibold">댓글 {comments.length}</h2><div className="mt-3 rounded-xl border border-gray-5 px-7 py-[30px]">
+        {comments.length === 0 ? <p className="py-8 text-center text-gray-2">첫 댓글을 남겨보세요.</p> : <div className="space-y-[60px]">{comments.map((comment, index) => <div key={comment.id} className="relative flex gap-4 pr-12"><Avatar name={comment.author} index={index} /><div className="min-w-0 flex-1"><div className="flex items-end gap-4"><strong className="text-2xl font-medium">{comment.author}</strong><span className="mb-0.5 text-sm font-normal">{elapsed(comment.createdAt)}</span>{comment.updatedAt && <span className="mb-0.5 text-sm text-gray-2">수정됨</span>}</div>
+          {editingId === comment.id ? <div className="mt-3"><textarea value={editingContent} onChange={(event) => setEditingContent(event.target.value)} autoFocus className="min-h-24 w-full resize-none rounded-lg border border-gray-5 p-3 text-xl outline-none focus:ring-2 focus:ring-primary" /><div className="mt-2 flex justify-end gap-2"><button type="button" onClick={() => { setEditingId(null); setEditingContent(""); }} className="cursor-pointer rounded-lg border border-gray-5 px-4 py-2">취소</button><button type="button" onClick={updateComment} disabled={!editingContent.trim()} className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-white disabled:cursor-not-allowed disabled:bg-gray-5">수정 완료</button></div></div> : <><p className="mt-2 whitespace-pre-wrap text-xl font-normal leading-7">{comment.content}</p><button type="button" className="mt-3 text-sm font-normal">답글</button></>}
+        </div><div className="absolute right-[15px] top-[15px]"><button type="button" onClick={() => setOpenMenu((current) => current === comment.id ? null : comment.id)} aria-label={`${comment.author} 댓글 메뉴`} aria-expanded={openMenu === comment.id} className="flex h-6 w-7 cursor-pointer items-center justify-center"><Image src="/icons/Posts/more.svg" alt="" width={20} height={6} /></button>{openMenu === comment.id && <div className="absolute right-0 top-8 z-10 w-[82px] overflow-hidden rounded-lg border border-gray-5 bg-white py-1 shadow-lg"><button type="button" onClick={() => startEditing(comment)} className="flex h-8 w-full cursor-pointer items-center gap-1 px-2 text-[15px] font-medium hover:bg-gray-4"><Image src="/icons/common/edit.svg" alt="" width={22} height={22} />수정</button><button type="button" onClick={() => removeComment(comment.id)} className="flex h-8 w-full cursor-pointer items-center gap-1 px-2 text-[15px] font-medium text-[#FF0000] hover:bg-gray-4"><Image src="/icons/common/trash.svg" alt="" width={22} height={22} />삭제</button></div>}</div></div>)}</div>}
       </div></section>
 
-      <section className="mt-7"><h2 className="text-2xl font-bold">댓글 작성</h2><div className="relative mt-4 rounded-xl border border-gray-5 p-4 pb-20 focus-within:ring-2 focus-within:ring-primary"><textarea value={content} onChange={(event) => setContent(event.target.value)} placeholder="댓글을 작성하세요." className="min-h-24 w-full resize-none text-lg outline-none placeholder:text-gray-2" /><button type="button" onClick={addComment} disabled={!content.trim()} className="absolute bottom-5 right-5 cursor-pointer rounded-lg bg-primary px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-5">등록</button></div>{content.trim() && <AiSuggestion type="comment" onApply={setContent} />}</section>
+      <section className="mt-7"><h2 className="text-2xl font-semibold">댓글 작성</h2><div className="relative mt-4 h-[141px] rounded-xl border border-gray-5 p-4 pb-14 focus-within:ring-2 focus-within:ring-primary"><textarea value={content} onChange={(event) => setContent(event.target.value)} placeholder="댓글을 작성하세요." className="h-full w-full resize-none text-xl font-medium outline-none placeholder:font-medium placeholder:text-[#969696]" /><button type="button" onClick={addComment} disabled={!content.trim()} className="absolute bottom-4 right-4 cursor-pointer rounded-lg bg-primary px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-5">등록</button></div>{content.trim() && <AiSuggestion type="comment" onApply={setContent} />}</section>
     </div></main>
   );
 }
