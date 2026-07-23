@@ -503,7 +503,7 @@ export default function Home() {
       <div className="shrink-0">
         <Sidebar />
       </div>
-      <main className="min-w-0 flex-1 overflow-y-auto px-8 py-7">
+      <main className="ml-64 min-w-0 flex-1 overflow-y-auto px-8 py-7">
         <div className="mx-auto w-full max-w-[1180px]">
           <ProjectOverview />
           <div className="mt-10">
