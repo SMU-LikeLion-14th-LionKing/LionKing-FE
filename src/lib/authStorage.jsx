@@ -40,9 +40,7 @@ export function saveAuthTokens(authData, keepLoggedIn) {
   }
 
   clearAuthTokens();
-  const storage = keepLoggedIn
-    ? window.localStorage
-    : window.sessionStorage;
+  const storage = keepLoggedIn ? window.localStorage : window.sessionStorage;
 
   storage.setItem("access_token", authData.access_token);
   storage.setItem("refresh_token", authData.refresh_token);

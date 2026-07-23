@@ -3,9 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import AiSuggestion from "./AiSuggestion";
 import { formatDateTime } from "./DateTimePicker";
+import {
+  DEFAULT_PROFILE_JSON,
+  getProfileSnapshot,
+  subscribeToProfile,
+} from "@/lib/profileStorage";
 
 const typeLabels = { task: "작업", question: "질문", note: "회의록" };
 const colors = ["bg-[#ef6475]", "bg-[#8c73df]", "bg-green"];
@@ -19,8 +24,8 @@ function elapsed(value) {
   return `${Math.floor(minutes / 1440)}일 전`;
 }
 
-function Avatar({ name, index = 0 }) {
-  return <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${colors[index % colors.length]} text-xl font-bold text-white`}>{name.slice(0, 1)}</div>;
+function Avatar({ name, image = "", index = 0 }) {
+  return <div className={`relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full ${colors[index % colors.length]} text-xl font-bold text-white`}>{image ? <Image src={image} alt={`${name} 프로필`} fill unoptimized className="object-cover" /> : name.slice(0, 1)}</div>;
 }
 
 function voteMeta(vote, now) {
@@ -82,6 +87,15 @@ export default function PostDetail() {
   const [voteSelections, setVoteSelections] = useState([]);
   const [voteModalOpen, setVoteModalOpen] = useState(false);
   const [now] = useState(() => Date.now());
+  const profileSnapshot = useSyncExternalStore(
+    subscribeToProfile,
+    getProfileSnapshot,
+    () => DEFAULT_PROFILE_JSON,
+  );
+  const profile = useMemo(
+    () => JSON.parse(profileSnapshot),
+    [profileSnapshot],
+  );
 
   useEffect(() => {
     const posts = JSON.parse(localStorage.getItem("lionking-posts") ?? "[]");
@@ -95,7 +109,7 @@ export default function PostDetail() {
 
   const addComment = () => {
     if (!content.trim()) return;
-    const next = [...comments, { id: crypto.randomUUID(), author: "김멋사", content: content.trim(), createdAt: new Date().toISOString() }];
+    const next = [...comments, { id: crypto.randomUUID(), author: profile.name, content: content.trim(), createdAt: new Date().toISOString() }];
     setComments(next);
     localStorage.setItem(`lionking-comments-${id}`, JSON.stringify(next));
     setContent("");
@@ -142,11 +156,11 @@ export default function PostDetail() {
   const removePost = () => {
     const posts = JSON.parse(localStorage.getItem("lionking-posts") ?? "[]").filter((item) => String(item.id) !== String(post.id));
     localStorage.setItem("lionking-posts", JSON.stringify(posts));
-    router.push("/dashboard");
+    router.push("/main");
   };
 
   if (!loaded) return <main className="flex-1" />;
-  if (!post) return <main className="flex flex-1 items-center justify-center"><div className="text-center"><p className="text-xl font-semibold">게시글을 찾을 수 없습니다.</p><Link href="/dashboard" className="mt-4 inline-block text-primary">목록으로 돌아가기</Link></div></main>;
+  if (!post) return <main className="flex flex-1 items-center justify-center"><div className="text-center"><p className="text-xl font-semibold">게시글을 찾을 수 없습니다.</p><Link href="/main" className="mt-4 inline-block text-primary">목록으로 돌아가기</Link></div></main>;
 
   const image = post.coverImage ?? post.files?.find((file) => file?.preview)?.preview;
   const hasVote = post.type === "question" && Boolean(post.vote);
@@ -156,7 +170,7 @@ export default function PostDetail() {
       <div className="flex items-center gap-3"><Image src="/icons/Sidebar/lion.svg" alt="" width={45} height={45} /><h1 className="text-[36px] font-bold">라이온킹</h1></div>
       <article className="relative mt-10 min-h-[355px] rounded-xl border border-gray-5 p-7 lg:p-8"><div className={`grid gap-8 ${hasVote || image ? "lg:grid-cols-[minmax(0,0.8fr)_minmax(380px,1.2fr)] lg:gap-12" : ""}`}>
         <div className="flex min-h-[291px] flex-col"><span className="inline-flex w-fit rounded-full border border-primary px-3 py-1 text-sm font-medium">{typeLabels[post.type] ?? "게시글"}</span>
-          <div className="mt-4 flex items-center gap-3"><Avatar name="김멋사" index={2} /><strong className="text-2xl font-medium">김멋사</strong><span className="text-sm font-normal">{elapsed(post.createdAt)}</span></div>
+          <div className="mt-4 flex items-center gap-3"><Avatar name={profile.name} image={profile.image} index={2} /><strong className="text-2xl font-medium">{profile.name}</strong><span className="text-sm font-normal">{elapsed(post.createdAt)}</span></div>
           <h2 className="mt-6 text-2xl font-semibold">{post.title}</h2><p className="mt-3 whitespace-pre-wrap text-base font-normal leading-6">{post.content}</p>
           {(post.files ?? []).length > 0 && <div className="mt-5 flex flex-wrap gap-2">{post.files.map((file, index) => <span key={`${file.name}-${index}`} className="rounded-lg bg-gray-4 px-3 py-2 text-sm">📎 {file.name}</span>)}</div>}
           <div className="mt-auto pt-6"><div className="flex items-center gap-2 text-base font-normal"><Image src="/icons/Posts/reply.svg" alt="댓글" width={18} height={18} /><span>{comments.length}</span></div><div className="mt-2 flex items-center gap-2 text-sm font-normal"><span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-gray-2 text-[9px] text-white">✓</span><span>검토중 {comments.length}</span></div></div>
