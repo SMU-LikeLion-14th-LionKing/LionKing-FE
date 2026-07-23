@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import DateTimePicker, {
+  formatDateTime,
+} from "@/components/Posts/DateTimePicker";
 
 const CATEGORIES = [
   "IT/소프트웨어",
@@ -11,6 +14,11 @@ const CATEGORIES = [
   "디자인/영상",
   "마케팅/기획",
   "기타",
+];
+const TEAM_ICONS = [
+  "/icons/Sidebar/lion.svg",
+  "/icons/Sidebar/tiger.svg",
+  "/icons/Sidebar/burger.svg",
 ];
 
 const fieldClass =
@@ -33,8 +41,9 @@ export default function ProjectCreateForm() {
     teamName: "",
     projectName: "",
     category: "",
-    deadline: "",
+    deadline: null,
   });
+  const [isDeadlinePickerOpen, setIsDeadlinePickerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -88,10 +97,24 @@ export default function ProjectCreateForm() {
         });
       }
 
+      const iconUsage = Object.fromEntries(
+        TEAM_ICONS.map((icon) => [
+          icon,
+          storedTeams.filter((team) => team.icon === icon).length,
+        ]),
+      );
+      const minimumUsage = Math.min(...Object.values(iconUsage));
+      const leastUsedIcons = TEAM_ICONS.filter(
+        (icon) => iconUsage[icon] === minimumUsage,
+      );
+      const selectedIcon =
+        leastUsedIcons[Math.floor(Math.random() * leastUsedIcons.length)];
+
       const nextTeam = {
         projectId: String(projectId),
         teamName: form.teamName.trim(),
         projectTitle: form.projectName.trim(),
+        icon: selectedIcon,
       };
       const nextTeams = [
         nextTeam,
@@ -102,6 +125,7 @@ export default function ProjectCreateForm() {
       sessionStorage.setItem("project_teams", JSON.stringify(nextTeams));
       sessionStorage.setItem("selected_project_id", String(projectId));
       sessionStorage.setItem("selected_team_name", form.teamName.trim());
+      sessionStorage.setItem("selected_team_icon", nextTeam.icon);
       sessionStorage.setItem(
         "selected_project_title",
         form.projectName.trim(),
@@ -121,6 +145,7 @@ export default function ProjectCreateForm() {
   };
 
   return (
+    <>
     <section className="mx-auto w-full max-w-[612px] rounded-[11px] border-2 border-gray-5 bg-white px-6 py-10 sm:px-[41px] sm:pb-8 sm:pt-[42px]">
       <h1 className="text-[32px] font-bold tracking-[-0.7px] text-[#191f28]">
         프로젝트 생성
@@ -179,18 +204,16 @@ export default function ProjectCreateForm() {
 
         <div className="mt-[43px]">
           <FieldLabel htmlFor="deadline">마감기한</FieldLabel>
-          <input
+          <button
             id="deadline"
-            type="text"
-            value={form.deadline}
-            onChange={updateField("deadline")}
-            onFocus={(event) => (event.currentTarget.type = "datetime-local")}
-            onBlur={(event) => {
-              if (!event.currentTarget.value) event.currentTarget.type = "text";
-            }}
-            className={`${fieldClass} appearance-none`}
-            placeholder="마감기한 및 시간을 입력하세요."
-          />
+            type="button"
+            onClick={() => setIsDeadlinePickerOpen(true)}
+            className={`${fieldClass} text-left`}
+          >
+            {form.deadline
+              ? formatDateTime(form.deadline)
+              : "마감기한 및 시간을 입력하세요."}
+          </button>
         </div>
 
         <div className="mt-[33px] flex justify-end">
@@ -209,5 +232,18 @@ export default function ProjectCreateForm() {
         </div>
       </form>
     </section>
+    {isDeadlinePickerOpen && (
+      <DateTimePicker
+        value={form.deadline}
+        label="프로젝트 마감기한"
+        onClose={() => setIsDeadlinePickerOpen(false)}
+        onConfirm={(date) => {
+          setForm((current) => ({ ...current, deadline: date }));
+          setIsDeadlinePickerOpen(false);
+          if (error) setError("");
+        }}
+      />
+    )}
+    </>
   );
 }

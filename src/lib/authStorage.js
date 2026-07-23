@@ -1,4 +1,11 @@
 const AUTH_KEYS = ["access_token", "refresh_token", "user_id"];
+const PROJECT_SESSION_KEYS = [
+  "project_teams",
+  "selected_project_id",
+  "selected_team_name",
+  "selected_team_icon",
+  "selected_project_title",
+];
 
 const getStorages = () =>
   typeof window === "undefined"
@@ -21,6 +28,13 @@ export function getRefreshToken() {
 
 export function saveAuthTokens(authData, keepLoggedIn) {
   if (typeof window === "undefined") return;
+
+  const previousUserId = getAuthStorage()?.getItem("user_id") ?? null;
+  const nextUserId =
+    authData.user_id === undefined ? null : String(authData.user_id);
+  if (previousUserId !== nextUserId) {
+    PROJECT_SESSION_KEYS.forEach((key) => sessionStorage.removeItem(key));
+  }
 
   clearAuthTokens();
   const storage = keepLoggedIn

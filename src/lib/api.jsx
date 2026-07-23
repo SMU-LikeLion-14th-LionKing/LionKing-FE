@@ -32,16 +32,23 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    const isUnauthorized = error.response?.status === 401;
+    const isUnauthorized =
+      error.response?.status === 401 || error.response?.status === 403;
     const isReissueRequest = originalRequest?.url?.includes(
       "/api/auth/reissue",
     );
+    const isPublicAuthRequest = [
+      "/api/auth/login",
+      "/api/auth/signup",
+      "/api/auth/me/password",
+    ].some((path) => originalRequest?.url?.includes(path));
 
     if (
       !isUnauthorized ||
       !originalRequest ||
       originalRequest._retry ||
-      isReissueRequest
+      isReissueRequest ||
+      isPublicAuthRequest
     ) {
       return Promise.reject(error);
     }

@@ -90,11 +90,15 @@ const getSelectedProjectId = () =>
   sessionStorage.getItem("selected_project_id") || "";
 const getSelectedTeamName = () =>
   sessionStorage.getItem("selected_team_name") || "라이온킹";
+const getSelectedTeamIcon = () =>
+  sessionStorage.getItem("selected_team_icon") ||
+  "/icons/Sidebar/lion.svg";
 const getSelectedProjectTitle = () =>
   sessionStorage.getItem("selected_project_title") ||
   "AI로 팀원 간의 소통 오류를 없앨 수 있다면?";
 const getServerProjectId = () => "";
 const getServerTeamName = () => "라이온킹";
+const getServerTeamIcon = () => "/icons/Sidebar/lion.svg";
 const getServerProjectTitle = () =>
   "AI로 팀원 간의 소통 오류를 없앨 수 있다면?";
 
@@ -185,13 +189,13 @@ function getDDay(value) {
   return difference > 0 ? `D-${difference}` : `D+${Math.abs(difference)}`;
 }
 
-function ProjectOverview({ summary, teamName, projectTitle }) {
+function ProjectOverview({ summary, teamName, teamIcon, projectTitle }) {
   return (
     <>
       <header className="flex items-center gap-3 border-b border-gray-5 pb-5">
         <Image
-          src="/icons/Sidebar/lion.svg"
-          alt="라이온킹"
+          src={teamIcon}
+          alt={teamName}
           width={42}
           height={42}
         />
@@ -549,6 +553,11 @@ export default function Home() {
     getSelectedTeamName,
     getServerTeamName,
   );
+  const teamIcon = useSyncExternalStore(
+    subscribeToProjectSelection,
+    getSelectedTeamIcon,
+    getServerTeamIcon,
+  );
   const projectTitle = useSyncExternalStore(
     subscribeToProjectSelection,
     getSelectedProjectTitle,
@@ -610,6 +619,7 @@ export default function Home() {
           <ProjectOverview
             summary={projectSummary}
             teamName={teamName}
+            teamIcon={teamIcon}
             projectTitle={projectTitle}
           />
           <div className="mt-10">

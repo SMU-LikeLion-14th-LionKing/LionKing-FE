@@ -26,11 +26,19 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const request = error.config;
+    const status = error.response?.status;
+    const isAuthFailure = status === 401 || status === 403;
+    const isPublicAuthRequest = [
+      "/api/auth/login",
+      "/api/auth/signup",
+      "/api/auth/me/password",
+    ].some((path) => request?.url?.includes(path));
     if (
-      error.response?.status !== 401 ||
+      !isAuthFailure ||
       !request ||
       request._retry ||
-      request.url?.includes("/api/auth/reissue")
+      request.url?.includes("/api/auth/reissue") ||
+      isPublicAuthRequest
     ) {
       return Promise.reject(error);
     }
