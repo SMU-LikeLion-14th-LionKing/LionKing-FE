@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import api from "@/lib/api";
 
 const INITIAL_PROFILE = {
-  name: "김멋사",
-  email: "likelion@gmail.com",
+  name: "사용자",
+  email: "",
 };
 
 function TextField({ label, value, onChange }) {
@@ -96,6 +97,43 @@ export default function ProfileCard() {
   const [profileImage, setProfileImage] = useState("");
   const fileInputRef = useRef(null);
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchUser = async () => {
+      try {
+        const response = await api.get("/api/users/me", {
+          signal: controller.signal,
+        });
+        const result = response.data;
+
+        if (!result?.isSuccess || !result.data) {
+          throw new Error(result?.message || "사용자 정보를 불러오지 못했습니다.");
+        }
+
+        const userProfile = {
+          name: result.data.name || INITIAL_PROFILE.name,
+          email: result.data.email || INITIAL_PROFILE.email,
+        };
+
+        setSavedProfile(userProfile);
+        setProfile(userProfile);
+        setProfileImage(result.data.profile_image_url || "");
+        setIsSaveEnabled(false);
+      } catch (error) {
+        if (error.name !== "CanceledError") {
+          setSavedProfile(INITIAL_PROFILE);
+          setProfile(INITIAL_PROFILE);
+          setProfileImage("");
+        }
+      }
+    };
+
+    fetchUser();
+
+    return () => controller.abort();
+  }, []);
+
   const updateProfile = (field) => (event) => {
     const nextProfile = { ...profile, [field]: event.target.value };
     setProfile(nextProfile);
@@ -125,9 +163,16 @@ export default function ProfileCard() {
       <h1 className="text-3xl font-bold tracking-[-0.04em] text-gray-1">마이페이지</h1>
 
       <div className="mt-7 flex flex-wrap items-center gap-7">
-        <div className="relative flex h-29 w-29 items-center justify-center overflow-hidden rounded-full bg-[#35bd9f] text-4xl font-bold text-white">
+        <div className="relative flex h-29 w-29 items-center justify-center overflow-hidden rounded-full bg-primary text-4xl font-bold text-white">
           {profileImage ? (
-            <Image src={profileImage} alt={`${profile.name} 프로필 사진`} fill unoptimized className="object-cover" />
+            // 외부 이미지 호스트가 정해지지 않아 일반 img로 표시합니다.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profileImage}
+              alt={`${profile.name} 프로필 사진`}
+              className="h-full w-full object-cover"
+              onError={() => setProfileImage("")}
+            />
           ) : profile.name.trim().charAt(0)}
         </div>
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleProfileImageChange} className="sr-only" />
