@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import DeadlineBadge from "@/components/common/DeadlineBadge";
@@ -265,10 +266,13 @@ function ProjectOverview({ summary, teamName, teamIcon, projectTitle }) {
               />
               공지사항
             </h2>
-            <button className="flex items-center gap-2 text-right text-[14px] font-medium leading-[140%] text-gray-2">
+            <Link
+              href="/notice"
+              className="flex items-center gap-2 text-right text-[14px] font-medium leading-[140%] text-gray-2"
+            >
               전체 보기
               <SvgSlot name="arrow" className="h-3 w-[7px]" />
-            </button>
+            </Link>
           </div>
           <ul className="divide-y divide-[#e5e8eb] leading-[1.45]">
             <li className="py-3">
