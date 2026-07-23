@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import DeadlineBadge from "@/components/common/DeadlineBadge";
+import api from "@/lib/api";
 
 const svgIcons = {
   search: "/icons/main/search.svg",
@@ -80,6 +81,23 @@ const posts = [
   },
 ];
 
+const subscribeToProjectSelection = (callback) => {
+  window.addEventListener("team-selection-changed", callback);
+  return () =>
+    window.removeEventListener("team-selection-changed", callback);
+};
+const getSelectedProjectId = () =>
+  sessionStorage.getItem("selected_project_id") || "";
+const getSelectedTeamName = () =>
+  sessionStorage.getItem("selected_team_name") || "라이온킹";
+const getSelectedProjectTitle = () =>
+  sessionStorage.getItem("selected_project_title") ||
+  "AI로 팀원 간의 소통 오류를 없앨 수 있다면?";
+const getServerProjectId = () => "";
+const getServerTeamName = () => "라이온킹";
+const getServerProjectTitle = () =>
+  "AI로 팀원 간의 소통 오류를 없앨 수 있다면?";
+
 function SvgSlot({ name, className = "" }) {
   return (
     <Image
@@ -144,7 +162,30 @@ function BoardHeader({ activeFilter, onFilterChange }) {
   );
 }
 
-function ProjectOverview() {
+function formatDeadline(value) {
+  if (!value) return "2026.07.24";
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .format(new Date(value))
+    .replace(/\. /g, ".")
+    .replace(/\.$/, "");
+}
+
+function getDDay(value) {
+  if (!value) return "D-17";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const deadline = new Date(value);
+  deadline.setHours(0, 0, 0, 0);
+  const difference = Math.ceil((deadline - today) / 86400000);
+  if (difference === 0) return "D-DAY";
+  return difference > 0 ? `D-${difference}` : `D+${Math.abs(difference)}`;
+}
+
+function ProjectOverview({ summary, teamName, projectTitle }) {
   return (
     <>
       <header className="flex items-center gap-3 border-b border-gray-5 pb-5">
@@ -154,15 +195,19 @@ function ProjectOverview() {
           width={42}
           height={42}
         />
-        <h1 className="text-[30px] font-bold">라이온킹</h1>
+        <h1 className="text-[30px] font-bold">{teamName}</h1>
       </header>
 
       <section className="mt-5 grid min-h-[210px] grid-cols-[1.1fr_.9fr] items-center gap-12 rounded-[10px] border border-gray-5 px-12 py-8">
         <div>
           <h2 className="text-[23px] font-bold tracking-[-.4px]">
-            AI로 팀원 간의 소통 오류를 없앨 수 있다면?
+            {summary?.title || projectTitle}
           </h2>
-          <DeadlineBadge date="2026.07.24" dDay="D-17" className="mt-4" />
+          <DeadlineBadge
+            date={formatDeadline(summary?.deadline)}
+            dDay={getDDay(summary?.deadline)}
+            className="mt-4"
+          />
         </div>
         <div>
           <p className="text-base font-semibold">전체 진행률</p>
@@ -493,6 +538,63 @@ function PostCard({ post }) {
 
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState("전체");
+  const [projectSummary, setProjectSummary] = useState(null);
+  const projectId = useSyncExternalStore(
+    subscribeToProjectSelection,
+    getSelectedProjectId,
+    getServerProjectId,
+  );
+  const teamName = useSyncExternalStore(
+    subscribeToProjectSelection,
+    getSelectedTeamName,
+    getServerTeamName,
+  );
+  const projectTitle = useSyncExternalStore(
+    subscribeToProjectSelection,
+    getSelectedProjectTitle,
+    getServerProjectTitle,
+  );
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    let isMounted = true;
+
+    api
+      .get(`/api/projects/${projectId}`)
+      .then((response) => {
+        const result = response.data;
+        if (
+          isMounted &&
+          result?.isSuccess !== false &&
+          result?.data?.team_name
+        ) {
+          sessionStorage.setItem(
+            "selected_team_name",
+            result.data.team_name,
+          );
+          window.dispatchEvent(new Event("team-selection-changed"));
+        }
+      })
+      .catch(() => {
+        // 팀 선택 조회가 실패하면 생성 단계에서 저장한 팀명을 유지합니다.
+      });
+
+    api
+      .get(`/api/projects/${projectId}/summary`)
+      .then((response) => {
+        if (isMounted && response.data?.isSuccess !== false) {
+          setProjectSummary(response.data?.data ?? null);
+        }
+      })
+      .catch(() => {
+        // 생성 직후 저장된 프로젝트 ID로 요약을 불러오지 못하면 기본 UI를 유지합니다.
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [projectId]);
   const filteredPosts =
     activeFilter === "전체"
       ? posts
@@ -505,7 +607,11 @@ export default function Home() {
       </div>
       <main className="min-w-0 flex-1 overflow-y-auto px-8 py-7">
         <div className="mx-auto w-full max-w-[1180px]">
-          <ProjectOverview />
+          <ProjectOverview
+            summary={projectSummary}
+            teamName={teamName}
+            projectTitle={projectTitle}
+          />
           <div className="mt-10">
             <BoardHeader
               activeFilter={activeFilter}

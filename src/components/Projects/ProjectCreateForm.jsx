@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import api from "@/lib/api";
 
 const CATEGORIES = [
   "IT/소프트웨어",
@@ -34,19 +35,89 @@ export default function ProjectCreateForm() {
     category: "",
     deadline: "",
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const updateField = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }));
+    if (error) setError("");
   };
 
   const isComplete = Object.values(form).every(Boolean);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!isComplete) return;
-    router.push(
-      `/invite?team=${encodeURIComponent(form.teamName)}&project=${encodeURIComponent(form.projectName)}`,
-    );
+    if (!isComplete || isLoading) return;
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const response = await api.post("/api/projects/create", {
+        name: form.teamName.trim(),
+        projectType: form.category,
+        title: form.projectName.trim(),
+        deadline: new Date(form.deadline).toISOString(),
+      });
+      const result = response.data;
+
+      if (result?.isSuccess === false) {
+        throw new Error(result.message || "프로젝트 생성에 실패했습니다.");
+      }
+
+      const projectId = result?.data?.id;
+      if (projectId === undefined || projectId === null) {
+        throw new Error("프로젝트 생성 응답에 ID가 없습니다.");
+      }
+
+      const storedTeams = JSON.parse(
+        sessionStorage.getItem("project_teams") || "[]",
+      );
+      if (storedTeams.length === 0) {
+        const previousTeamName =
+          sessionStorage.getItem("selected_team_name") || "라이온킹";
+        const previousProjectId =
+          sessionStorage.getItem("selected_project_id");
+        const previousProjectTitle =
+          sessionStorage.getItem("selected_project_title") ||
+          "AI로 팀원 간의 소통 오류를 없앨 수 있다면?";
+        storedTeams.push({
+          projectId: previousProjectId,
+          teamName: previousTeamName,
+          projectTitle: previousProjectTitle,
+        });
+      }
+
+      const nextTeam = {
+        projectId: String(projectId),
+        teamName: form.teamName.trim(),
+        projectTitle: form.projectName.trim(),
+      };
+      const nextTeams = [
+        nextTeam,
+        ...storedTeams.filter(
+          (team) => String(team.projectId) !== String(projectId),
+        ),
+      ];
+      sessionStorage.setItem("project_teams", JSON.stringify(nextTeams));
+      sessionStorage.setItem("selected_project_id", String(projectId));
+      sessionStorage.setItem("selected_team_name", form.teamName.trim());
+      sessionStorage.setItem(
+        "selected_project_title",
+        form.projectName.trim(),
+      );
+      router.push(
+        `/invite?team=${encodeURIComponent(form.teamName)}&project=${encodeURIComponent(form.projectName)}&projectId=${encodeURIComponent(projectId)}`,
+      );
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          requestError.message ||
+          "프로젝트 생성 중 오류가 발생했습니다.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -123,12 +194,17 @@ export default function ProjectCreateForm() {
         </div>
 
         <div className="mt-[33px] flex justify-end">
+          {error && (
+            <p role="alert" className="mr-auto self-center text-sm text-error">
+              {error}
+            </p>
+          )}
           <button
             type="submit"
-            disabled={!isComplete}
+            disabled={!isComplete || isLoading}
             className="h-14 w-[168px] rounded-[10px] bg-primary text-base font-semibold text-white transition hover:bg-secondary disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-3"
           >
-            프로젝트 생성
+            {isLoading ? "생성 중..." : "프로젝트 생성"}
           </button>
         </div>
       </form>

@@ -6,6 +6,7 @@ export default function SidebarItem({
   icon,
   active = false,
   href,
+  onClick,
 }) {
   const className = `flex w-full items-center gap-2 border px-2 py-2 text-left ${
     active
@@ -15,10 +16,10 @@ export default function SidebarItem({
   const content = <><Image src={icon} alt="" width={28} height={28} /><span className="text-base font-medium leading-none">{title}</span></>;
 
   if (href) {
-    return <Link href={href} className={className} aria-current={active ? "page" : undefined}>{content}</Link>;
+    return <Link href={href} onClick={onClick} className={className} aria-current={active ? "page" : undefined}>{content}</Link>;
   }
 
   return (
-    <button type="button" className={className}>{content}</button>
+    <button type="button" onClick={onClick} className={className}>{content}</button>
   );
 }

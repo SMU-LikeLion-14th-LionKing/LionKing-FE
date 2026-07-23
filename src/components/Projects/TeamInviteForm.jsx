@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
+import api from "@/lib/api";
 
 function EmptyInviteList() {
   return (
@@ -41,32 +42,72 @@ export default function TeamInviteForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const teamName = searchParams.get("team") || "라이온킹";
+  const projectId =
+    searchParams.get("projectId") ||
+    (typeof window !== "undefined"
+      ? sessionStorage.getItem("selected_project_id")
+      : null);
   const [email, setEmail] = useState("");
   const [invites, setInvites] = useState([]);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const addInvite = () => {
+  const addInvite = async () => {
     const normalizedEmail = email.trim();
-    if (!normalizedEmail) return;
+    if (!normalizedEmail || isLoading) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       setError("올바른 이메일을 입력해주세요.");
       return;
     }
-    if (invites.includes(normalizedEmail)) {
+    if (invites.some((invite) => invite.email === normalizedEmail)) {
       setError("이미 초대 목록에 있는 이메일입니다.");
       return;
     }
-    setInvites((current) => [...current, normalizedEmail]);
-    setEmail("");
+    if (!projectId) {
+      setError("프로젝트 정보가 없습니다. 프로젝트를 다시 생성해주세요.");
+      return;
+    }
+
+    setIsLoading(true);
     setError("");
+
+    try {
+      const response = await api.post(`/api/projects/${projectId}/members`, {
+        team_name: teamName,
+        email: normalizedEmail,
+      });
+      const result = response.data;
+
+      if (result?.isSuccess === false) {
+        throw new Error(result.message || "팀원 초대에 실패했습니다.");
+      }
+
+      setInvites((current) => [
+        ...current,
+        {
+          email: normalizedEmail,
+          userId: result?.data?.user_id,
+          name: result?.data?.name,
+        },
+      ]);
+      setEmail("");
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          requestError.message ||
+          "팀원 초대 중 오류가 발생했습니다.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleInviteClick = (event) => {
+  const handleInviteClick = async (event) => {
     event.preventDefault();
     event.stopPropagation();
 
     if (!email.trim()) return;
-    addInvite();
+    await addInvite();
   };
 
   return (
@@ -129,7 +170,7 @@ export default function TeamInviteForm() {
         <ul className="mt-6 flex-1 space-y-4 overflow-y-auto">
           {invites.map((invite) => (
             <li
-              key={invite}
+              key={invite.email}
               className="flex min-h-12 items-center text-sm text-[#333d4b]"
             >
               <Image
@@ -139,7 +180,7 @@ export default function TeamInviteForm() {
                 height={40}
                 className="mr-6 shrink-0"
               />
-              <span className="w-[165px] truncate">{invite}</span>
+              <span className="w-[165px] truncate">{invite.email}</span>
               <span className="ml-2 inline-flex h-[30px] min-w-[78px] items-center justify-center rounded-[7px] bg-[#fff4e6] px-3 text-xs font-semibold text-orange">
                 대기 중
               </span>
@@ -152,10 +193,10 @@ export default function TeamInviteForm() {
         <button
           type="button"
           onClick={handleInviteClick}
-          disabled={!email.trim()}
+          disabled={!email.trim() || isLoading}
           className="h-14 w-32 rounded-[10px] bg-primary text-base font-semibold text-white transition hover:bg-secondary disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-3"
         >
-          초대하기
+          {isLoading ? "초대 중..." : "초대하기"}
         </button>
         <button
           type="button"

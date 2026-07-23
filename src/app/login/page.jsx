@@ -2,21 +2,57 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import api from "@/lib/api";
+import { saveAuthTokens } from "@/lib/authStorage";
 import Button from "@/components/common/Button";
 import Checkbox from "@/components/common/Checkbox";
 import Icon from "@/components/common/Icon";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
   const hasEmail = email.trim() !== "";
   const hasPassword = password !== "";
   const canSubmit = hasEmail && hasPassword;
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
+    if (!canSubmit || isLoading) return;
+
+    setIsLoading(true);
+    setLoginError("");
+
+    try {
+      const response = await api.post("/api/auth/login", {
+        email: email.trim(),
+        password,
+      });
+      const result = response.data;
+      if (result?.isSuccess === false) {
+        throw new Error(result.message || "로그인에 실패했습니다.");
+      }
+      if (!result?.data?.access_token || !result?.data?.refresh_token) {
+        throw new Error("로그인 응답에 토큰이 없습니다.");
+      }
+
+      saveAuthTokens(result.data, keepLoggedIn);
+      router.replace("/main");
+    } catch (error) {
+      setLoginError(
+        error.response?.data?.message ||
+          error.message ||
+          "이메일 또는 비밀번호를 확인해주세요.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -26,7 +62,11 @@ export default function LoginPage() {
           로그인
         </h1>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <form
+          onSubmit={handleSubmit}
+          autoComplete="off"
+          className="flex flex-col gap-5"
+        >
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-[#4E5968]">이메일</span>
             <input
@@ -37,7 +77,7 @@ export default function LoginPage() {
               className={`login-input h-[53px] w-full rounded-lg px-[25px] text-sm text-gray-1 outline-none placeholder:text-[#A8B0B9] transition-colors focus:ring-2 focus:ring-primary/30 ${
                 hasEmail ? "bg-third" : "bg-gray-4"
               }`}
-              autoComplete="email"
+              autoComplete="off"
             />
           </label>
 
@@ -52,7 +92,7 @@ export default function LoginPage() {
                 className={`login-input h-[53px] w-full rounded-lg px-[25px] pr-14 text-sm text-gray-1 outline-none placeholder:text-[#A8B0B9] transition-colors focus:ring-2 focus:ring-primary/30 ${
                   hasPassword ? "bg-third" : "bg-gray-4"
                 }`}
-                autoComplete="current-password"
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -68,6 +108,8 @@ export default function LoginPage() {
           <div className="-mt-2 flex items-center justify-between">
             <Checkbox
               label="로그인 상태 유지"
+              checked={keepLoggedIn}
+              onChange={(event) => setKeepLoggedIn(event.target.checked)}
               size={14}
               className="gap-1.5 text-sm font-normal leading-[1.4] text-[#4E5968] [&>span>span]:rounded-[3px] [&>span>span]:border"
             />
@@ -76,8 +118,14 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          <Button type="submit" variant="primary" disabled={!canSubmit} className="-mt-0.5 h-12 w-full rounded-lg px-3 py-4 text-sm">
-            로그인
+          {loginError && (
+            <p role="alert" className="-mt-2 text-sm text-error">
+              {loginError}
+            </p>
+          )}
+
+          <Button type="submit" variant="primary" disabled={!canSubmit || isLoading} className="-mt-0.5 h-12 w-full rounded-lg px-3 py-4 text-sm">
+            {isLoading ? "로그인 중..." : "로그인"}
           </Button>
         </form>
 
