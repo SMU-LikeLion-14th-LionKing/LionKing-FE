@@ -85,8 +85,7 @@ export default function ProjectCreateForm() {
       if (storedTeams.length === 0) {
         const previousTeamName =
           sessionStorage.getItem("selected_team_name") || "라이온킹";
-        const previousProjectId =
-          sessionStorage.getItem("selected_project_id");
+        const previousProjectId = sessionStorage.getItem("selected_project_id");
         const previousProjectTitle =
           sessionStorage.getItem("selected_project_title") ||
           "AI로 팀원 간의 소통 오류를 없앨 수 있다면?";
@@ -126,10 +125,7 @@ export default function ProjectCreateForm() {
       sessionStorage.setItem("selected_project_id", String(projectId));
       sessionStorage.setItem("selected_team_name", form.teamName.trim());
       sessionStorage.setItem("selected_team_icon", nextTeam.icon);
-      sessionStorage.setItem(
-        "selected_project_title",
-        form.projectName.trim(),
-      );
+      sessionStorage.setItem("selected_project_title", form.projectName.trim());
       router.push(
         `/invite?team=${encodeURIComponent(form.teamName)}&project=${encodeURIComponent(form.projectName)}&projectId=${encodeURIComponent(projectId)}`,
       );
@@ -146,104 +142,107 @@ export default function ProjectCreateForm() {
 
   return (
     <>
-    <section className="mx-auto w-full max-w-[612px] rounded-[11px] border-2 border-gray-5 bg-white px-6 py-10 sm:px-[41px] sm:pb-8 sm:pt-[42px]">
-      <h1 className="text-[32px] font-bold tracking-[-0.7px] text-[#191f28]">
-        프로젝트 생성
-      </h1>
+      <section className="mx-auto w-full max-w-[612px] rounded-[11px] border-2 border-gray-5 bg-white px-6 py-10 sm:px-[41px] sm:pb-8 sm:pt-[42px]">
+        <h1 className="text-[32px] font-bold tracking-[-0.7px] text-[#191f28]">
+          프로젝트 생성
+        </h1>
 
-      <form onSubmit={handleSubmit} className="mt-[45px]">
-        <div>
-          <FieldLabel htmlFor="teamName">팀 명</FieldLabel>
-          <input
-            id="teamName"
-            value={form.teamName}
-            onChange={updateField("teamName")}
-            className={fieldClass}
-            placeholder="팀 명을 입력하세요."
-          />
-        </div>
-
-        <div className="mt-[43px]">
-          <FieldLabel htmlFor="projectName">프로젝트 명</FieldLabel>
-          <input
-            id="projectName"
-            value={form.projectName}
-            onChange={updateField("projectName")}
-            className={fieldClass}
-            placeholder="프로젝트를 입력하세요."
-          />
-        </div>
-
-        <fieldset className="mt-[43px]">
-          <legend className="mb-[27px] text-sm font-semibold text-[#4e5968]">
-            프로젝트 분야 <span className="text-error">*</span>
-          </legend>
-          <div className="grid grid-cols-1 gap-x-[27px] gap-y-8 sm:grid-cols-2">
-            {CATEGORIES.map((category) => {
-              const selected = form.category === category;
-              return (
-                <button
-                  key={category}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() =>
-                    setForm((current) => ({ ...current, category }))
-                  }
-                  className={`h-14 rounded-[10px] border text-[15px] transition ${
-                    selected
-                      ? "border-primary bg-third font-semibold text-primary"
-                      : "border-transparent bg-gray-4 text-[#333d4b] hover:bg-gray-5"
-                  }`}
-                >
-                  {category}
-                </button>
-              );
-            })}
+        <form onSubmit={handleSubmit} className="mt-[45px]">
+          <div>
+            <FieldLabel htmlFor="teamName">팀 명</FieldLabel>
+            <input
+              id="teamName"
+              value={form.teamName}
+              onChange={updateField("teamName")}
+              className={fieldClass}
+              placeholder="팀 명을 입력하세요."
+            />
           </div>
-        </fieldset>
 
-        <div className="mt-[43px]">
-          <FieldLabel htmlFor="deadline">마감기한</FieldLabel>
-          <button
-            id="deadline"
-            type="button"
-            onClick={() => setIsDeadlinePickerOpen(true)}
-            className={`${fieldClass} text-left`}
-          >
-            {form.deadline
-              ? formatDateTime(form.deadline)
-              : "마감기한 및 시간을 입력하세요."}
-          </button>
-        </div>
+          <div className="mt-[43px]">
+            <FieldLabel htmlFor="projectName">프로젝트 명</FieldLabel>
+            <input
+              id="projectName"
+              value={form.projectName}
+              onChange={updateField("projectName")}
+              className={fieldClass}
+              placeholder="프로젝트를 입력하세요."
+            />
+          </div>
 
-        <div className="mt-[33px] flex justify-end">
-          {error && (
-            <p role="alert" className="mr-auto self-center text-sm text-error">
-              {error}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={!isComplete || isLoading}
-            className="h-14 w-[168px] rounded-[10px] bg-primary text-base font-semibold text-white transition hover:bg-secondary disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-3"
-          >
-            {isLoading ? "생성 중..." : "프로젝트 생성"}
-          </button>
-        </div>
-      </form>
-    </section>
-    {isDeadlinePickerOpen && (
-      <DateTimePicker
-        value={form.deadline}
-        label="프로젝트 마감기한"
-        onClose={() => setIsDeadlinePickerOpen(false)}
-        onConfirm={(date) => {
-          setForm((current) => ({ ...current, deadline: date }));
-          setIsDeadlinePickerOpen(false);
-          if (error) setError("");
-        }}
-      />
-    )}
+          <fieldset className="mt-[43px]">
+            <legend className="mb-[27px] text-sm font-semibold text-[#4e5968]">
+              프로젝트 분야 <span className="text-error">*</span>
+            </legend>
+            <div className="grid grid-cols-1 gap-x-[27px] gap-y-8 sm:grid-cols-2">
+              {CATEGORIES.map((category) => {
+                const selected = form.category === category;
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() =>
+                      setForm((current) => ({ ...current, category }))
+                    }
+                    className={`h-14 rounded-[10px] border text-[15px] transition ${
+                      selected
+                        ? "border-primary bg-third font-semibold text-primary"
+                        : "border-transparent bg-gray-4 text-[#333d4b] hover:bg-gray-5"
+                    }`}
+                  >
+                    {category}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <div className="mt-[43px]">
+            <FieldLabel htmlFor="deadline">마감기한</FieldLabel>
+            <button
+              id="deadline"
+              type="button"
+              onClick={() => setIsDeadlinePickerOpen(true)}
+              className={`${fieldClass} text-left`}
+            >
+              {form.deadline
+                ? formatDateTime(form.deadline)
+                : "마감기한 및 시간을 입력하세요."}
+            </button>
+          </div>
+
+          <div className="mt-[33px] flex justify-end">
+            {error && (
+              <p
+                role="alert"
+                className="mr-auto self-center text-sm text-error"
+              >
+                {error}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={!isComplete || isLoading}
+              className="h-14 w-[168px] rounded-[10px] bg-primary text-base font-semibold text-white transition hover:bg-secondary disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-3"
+            >
+              {isLoading ? "생성 중..." : "프로젝트 생성"}
+            </button>
+          </div>
+        </form>
+      </section>
+      {isDeadlinePickerOpen && (
+        <DateTimePicker
+          value={form.deadline}
+          label="프로젝트 마감기한"
+          onClose={() => setIsDeadlinePickerOpen(false)}
+          onConfirm={(date) => {
+            setForm((current) => ({ ...current, deadline: date }));
+            setIsDeadlinePickerOpen(false);
+            if (error) setError("");
+          }}
+        />
+      )}
     </>
   );
 }
