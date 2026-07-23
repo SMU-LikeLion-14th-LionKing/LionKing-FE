@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const CATEGORIES = [
   "IT/소프트웨어",
@@ -26,6 +27,7 @@ function FieldLabel({ htmlFor, children }) {
 }
 
 export default function ProjectCreateForm() {
+  const router = useRouter();
   const [form, setForm] = useState({
     teamName: "",
     projectName: "",
@@ -42,6 +44,9 @@ export default function ProjectCreateForm() {
   const handleSubmit = (event) => {
     event.preventDefault();
     if (!isComplete) return;
+    router.push(
+      `/invite?team=${encodeURIComponent(form.teamName)}&project=${encodeURIComponent(form.projectName)}`,
+    );
   };
 
   return (
