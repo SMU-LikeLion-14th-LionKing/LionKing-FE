@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 function ChatBubble({ className, children }) {
   return (
@@ -74,12 +75,12 @@ export default function HeroSection() {
           AI 협업 매니저와 함께 하는 팀 프로젝트
         </p>
         <div className="mt-6 flex gap-4">
-          <button type="button" className="h-14 rounded-xl bg-[#347fee] px-8 text-lg font-semibold text-white transition-colors hover:bg-[#2868d5]">
+          <Link href="/login" className="flex h-14 items-center justify-center rounded-xl bg-[#347fee] px-8 text-lg font-semibold text-white transition-colors hover:bg-[#2868d5]">
             로그인
-          </button>
-          <button type="button" className="h-14 rounded-xl border border-[#3182f6] bg-white px-8 text-lg font-semibold text-[#252525] transition-colors hover:bg-[#f4f8ff]">
+          </Link>
+          <Link href="/signup" className="flex h-14 items-center justify-center rounded-xl border border-[#3182f6] bg-white px-8 text-lg font-semibold text-[#252525] transition-colors hover:bg-[#f4f8ff]">
             회원가입
-          </button>
+          </Link>
         </div>
       </div>
       <HeroArtwork />
