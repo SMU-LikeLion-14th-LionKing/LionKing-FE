@@ -18,9 +18,9 @@ export default function DeadlineBadge({
 
   return (
     <div
-      className={`flex w-fit items-center gap-2 rounded-full px-5 py-2 text-lg font-semibold ${VARIANT_CLASSES[status]} ${className}`}
+      className={`flex h-[34px] w-fit items-center gap-1 rounded-full px-[15px] py-1.5 text-base font-semibold ${VARIANT_CLASSES[status]} ${className}`}
     >
-      <Icon name="alarm" size={22} monochrome />
+      <Icon name="alarm" size={18} monochrome />
       <span>마감일</span>
       {date && <span>{date}</span>}
       {completed ? (
