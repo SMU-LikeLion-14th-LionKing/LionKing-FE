@@ -35,18 +35,23 @@ export default function LoginPage() {
         password,
       });
       const result = response.data;
+
       if (result?.isSuccess === false) {
         throw new Error(result.message || "로그인에 실패했습니다.");
       }
-      if (!result?.data?.access_token || !result?.data?.refresh_token) {
+
+      const authData = result?.data;
+      if (!authData?.access_token || !authData?.refresh_token) {
         throw new Error("로그인 응답에 토큰이 없습니다.");
       }
 
-      saveAuthTokens(result.data, keepLoggedIn);
+      saveAuthTokens(authData, keepLoggedIn);
+
       router.replace("/main");
     } catch (error) {
       setLoginError(
         error.response?.data?.message ||
+          error.response?.data?.detail ||
           error.message ||
           "이메일 또는 비밀번호를 확인해주세요.",
       );
@@ -57,8 +62,14 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-[1024px] w-full items-center justify-center bg-white px-5 pb-12 sm:px-6">
-      <section className="w-full max-w-[500px] -translate-y-3" aria-labelledby="login-title">
-        <h1 id="login-title" className="mb-8 text-center text-[32px] font-bold leading-[1.1] tracking-[-0.8px] text-gray-1">
+      <section
+        className="w-full max-w-[500px] -translate-y-3"
+        aria-labelledby="login-title"
+      >
+        <h1
+          id="login-title"
+          className="mb-8 text-center text-[32px] font-bold leading-[1.1] tracking-[-0.8px] text-gray-1"
+        >
           로그인
         </h1>
 
@@ -72,7 +83,10 @@ export default function LoginPage() {
             <input
               type="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                if (loginError) setLoginError("");
+              }}
               placeholder="이메일을 입력하세요."
               className={`login-input h-[53px] w-full rounded-lg px-[25px] text-sm text-gray-1 outline-none placeholder:text-[#A8B0B9] transition-colors focus:ring-2 focus:ring-primary/30 ${
                 hasEmail ? "bg-third" : "bg-gray-4"
@@ -87,7 +101,10 @@ export default function LoginPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  if (loginError) setLoginError("");
+                }}
                 placeholder="비밀번호를 입력하세요."
                 className={`login-input h-[53px] w-full rounded-lg px-[25px] pr-14 text-sm text-gray-1 outline-none placeholder:text-[#A8B0B9] transition-colors focus:ring-2 focus:ring-primary/30 ${
                   hasPassword ? "bg-third" : "bg-gray-4"
@@ -113,7 +130,10 @@ export default function LoginPage() {
               size={14}
               className="gap-1.5 text-sm font-normal leading-[1.4] text-[#4E5968] [&>span>span]:rounded-[3px] [&>span>span]:border"
             />
-            <Link href="#" className="text-[11px] font-medium text-primary hover:underline">
+            <Link
+              href="/password-reset"
+              className="text-sm font-medium text-primary hover:underline"
+            >
               비밀번호를 잊어버리셨나요?
             </Link>
           </div>
@@ -124,14 +144,22 @@ export default function LoginPage() {
             </p>
           )}
 
-          <Button type="submit" variant="primary" disabled={!canSubmit || isLoading} className="-mt-0.5 h-12 w-full rounded-lg px-3 py-4 text-sm">
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={!canSubmit || isLoading}
+            className="-mt-0.5 h-12 w-full rounded-lg px-3 py-4 text-sm"
+          >
             {isLoading ? "로그인 중..." : "로그인"}
           </Button>
         </form>
 
-        <div className="mt-5 border-t border-gray-5 pt-5 text-center text-[11px] text-[#4E5968]">
+        <div className="mt-5 border-t border-gray-5 pt-5 text-center text-sm text-[#4E5968]">
           계정이 없으신가요?{" "}
-          <Link href="/signup" className="font-medium text-primary hover:underline">
+          <Link
+            href="/signup"
+            className="text-sm font-medium text-primary hover:underline"
+          >
             회원가입
           </Link>
         </div>
