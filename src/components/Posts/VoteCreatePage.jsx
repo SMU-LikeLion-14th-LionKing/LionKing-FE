@@ -34,7 +34,7 @@ export default function VoteCreatePage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-white"><Sidebar /><main className="min-w-0 flex-1 bg-white p-5 sm:p-8 lg:p-10"><div className="mx-auto w-full max-w-7xl"><div className="flex items-center gap-3"><Image src="/icons/Sidebar/lion.svg" alt="" width={45} height={45} /><h1 className="text-[36px] font-bold">라이온킹</h1></div>
+    <div className="flex min-h-screen bg-white"><Sidebar /><main className="ml-64 min-w-0 flex-1 bg-white p-5 sm:p-8 lg:p-10"><div className="mx-auto w-full max-w-7xl"><div className="flex items-center gap-3"><Image src="/icons/Sidebar/lion.svg" alt="" width={45} height={45} /><h1 className="text-[36px] font-bold">라이온킹</h1></div>
       <form className="mt-16 rounded-xl border border-gray-5 px-10 py-12" onSubmit={(event) => event.preventDefault()}><h2 className="text-2xl font-bold">투표 만들기</h2>
         <section className="mt-8"><h3 className="mb-6 text-2xl font-semibold">1. 투표 질문</h3><textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="어떤 내용에 대한 의견을 듣고 싶나요?" className="h-28 w-full resize-none rounded-lg border border-gray-5 p-5 outline-none placeholder:text-[20px] placeholder:font-medium placeholder:text-gray-2 focus:ring-2 focus:ring-primary" /></section>
         <section className="mt-8"><h3 className="mb-6 text-2xl font-semibold">2. 투표 방식</h3><button type="button" onClick={() => setMultiple((value) => !value)} className={`cursor-pointer rounded-lg border-2 px-6 py-4 ${multiple ? "border-primary bg-third" : "border-gray-5"}`}>복수 선택 {multiple ? "가능" : "불가능"}</button></section>

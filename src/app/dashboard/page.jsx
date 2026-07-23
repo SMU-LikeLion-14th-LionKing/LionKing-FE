@@ -3,9 +3,11 @@ import DashboardPosts from "@/components/Posts/DashboardPosts";
 
 export default function DashboardPage() {
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
       <Sidebar />
-      <DashboardPosts />
+      <main className="ml-64 min-h-screen">
+        <DashboardPosts />
+      </main>
     </div>
   );
 }
