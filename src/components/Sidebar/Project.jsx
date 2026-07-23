@@ -1,7 +1,12 @@
+"use client";
+
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import SidebarItem from "./SidebarItem";
 
 export default function Project() {
+  const pathname = usePathname();
+
   return (
     <section className="mt-8">
       <div className="mb-2 flex items-center justify-between px-1">
@@ -20,7 +25,12 @@ export default function Project() {
         </button>
       </div>
 
-      <SidebarItem title="라이온킹" icon="/icons/Sidebar/lion.svg" active />
+      <SidebarItem
+        title="라이온킹"
+        icon="/icons/Sidebar/lion.svg"
+        href="/teammanagement"
+        active={pathname === "/teammanagement"}
+      />
     </section>
   );
 }
