@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import api from "@/lib/api";
 import Button from "@/components/common/Button";
 import Icon from "@/components/common/Icon";
 
@@ -29,11 +29,7 @@ export default function SignupPage() {
     setSignupError("");
 
     try {
-      const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(
-        /\/$/,
-        "",
-      );
-      const response = await axios.post(`${apiBaseUrl}/api/auth/signup`, {
+      const response = await api.post("/api/auth/signup", {
         name: name.trim(),
         email: email.trim(),
         password,
