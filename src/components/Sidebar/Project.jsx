@@ -1,18 +1,59 @@
 "use client";
 
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { useMemo, useSyncExternalStore } from "react";
 import SidebarItem from "./SidebarItem";
 
+const DEFAULT_TEAMS = JSON.stringify([
+  {
+    projectId: null,
+    teamName: "라이온킹",
+    projectTitle: "AI로 팀원 간의 소통 오류를 없앨 수 있다면?",
+  },
+]);
+const subscribeToTeams = (callback) => {
+  window.addEventListener("team-selection-changed", callback);
+  return () => window.removeEventListener("team-selection-changed", callback);
+};
+const getTeamsSnapshot = () =>
+  sessionStorage.getItem("project_teams") || DEFAULT_TEAMS;
+const getServerTeamsSnapshot = () => DEFAULT_TEAMS;
+const getSelectedProjectSnapshot = () =>
+  sessionStorage.getItem("selected_project_id") || "";
+const getServerSelectedProjectSnapshot = () => "";
+
 export default function Project() {
-  const pathname = usePathname();
+  const teamsSnapshot = useSyncExternalStore(
+    subscribeToTeams,
+    getTeamsSnapshot,
+    getServerTeamsSnapshot,
+  );
+  const teams = useMemo(() => JSON.parse(teamsSnapshot), [teamsSnapshot]);
+  const selectedProjectId = useSyncExternalStore(
+    subscribeToTeams,
+    getSelectedProjectSnapshot,
+    getServerSelectedProjectSnapshot,
+  );
+
+  const selectTeam = (team) => {
+    if (team.projectId) {
+      sessionStorage.setItem("selected_project_id", String(team.projectId));
+    } else {
+      sessionStorage.removeItem("selected_project_id");
+    }
+    sessionStorage.setItem("selected_team_name", team.teamName);
+    sessionStorage.setItem("selected_project_title", team.projectTitle || "");
+    window.dispatchEvent(new Event("team-selection-changed"));
+    window.location.assign("/main");
+  };
 
   return (
     <section className="mt-8">
       <div className="mb-2 flex items-center justify-between px-1">
         <h2 className="text-base font-medium leading-none">프로젝트</h2>
-        <button
-          type="button"
+        <Link
+          href="/projects/create"
           aria-label="프로젝트 추가"
           className="flex h-[18px] w-[18px] items-center justify-center"
         >
@@ -22,15 +63,22 @@ export default function Project() {
             width={18}
             height={18}
           />
-        </button>
+        </Link>
       </div>
 
-      <SidebarItem
-        title="라이온킹"
-        icon="/icons/Sidebar/lion.svg"
-        href="/teammanagement"
-        active={pathname === "/teammanagement"}
-      />
+      {teams.map((team, index) => (
+        <SidebarItem
+          key={`${team.projectId ?? "default"}-${team.teamName}-${index}`}
+          title={team.teamName}
+          icon="/icons/Sidebar/lion.svg"
+          onClick={() => selectTeam(team)}
+          active={
+            team.projectId
+              ? String(team.projectId) === selectedProjectId
+              : !selectedProjectId
+          }
+        />
+      ))}
     </section>
   );
 }

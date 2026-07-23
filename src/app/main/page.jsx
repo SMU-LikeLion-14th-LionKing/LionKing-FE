@@ -90,118 +90,24 @@ const posts = [
   },
 ];
 
-const CATEGORY_CLASS = {
-  작업: "border-primary text-gray-1",
-  질문: "border-orange text-gray-1",
-  회의록: "border-green text-gray-1",
-};
-
-function formatRelativeTime(value) {
-  if (!value) return "";
-  const difference = Date.now() - new Date(value).getTime();
-  const minutes = Math.max(0, Math.floor(difference / 60000));
-  if (minutes < 1) return "방금 전";
-  if (minutes < 60) return `${minutes}분 전`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  const days = Math.floor(hours / 24);
-  return days === 1 ? "어제" : `${days}일 전`;
-}
-
-function normalizePost(post) {
-  const authorName = post.author?.name || "알 수 없음";
-  return {
-    id: post.postId,
-    detailId: post.postId,
-    type: post.categoryName || "게시글",
-    typeClass:
-      CATEGORY_CLASS[post.categoryName] || "border-gray-3 text-gray-1",
-    author: authorName,
-    initial: authorName.slice(0, 1),
-    avatar: "bg-[#37bea1]",
-    time: formatRelativeTime(post.createdAt),
-    title: post.title,
-    description: [],
-    comments: post.commentCount ?? 0,
-    reactionCount: post.reactionCount ?? 0,
-    content: null,
-  };
-}
-
-function resolveAttachmentUrl(fileUrl) {
-  if (!fileUrl || /^https?:\/\//i.test(fileUrl)) return fileUrl;
-  const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(
-    /\/$/,
-    "",
-  );
-  return `${apiBaseUrl}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
-}
-
-function normalizePostDetail(detail, summary) {
-  const basePost = normalizePost({ ...summary, ...detail });
-  const attachments = Array.isArray(detail.attachments)
-    ? detail.attachments
-    : [];
-  const imageAttachment = attachments.find(
-    (attachment) =>
-      attachment.fileType?.toLowerCase().startsWith("image") ||
-      /\.(png|jpe?g|gif|webp|svg)$/i.test(attachment.fileUrl || ""),
-  );
-
-  return {
-    ...basePost,
-    description: detail.content ? detail.content.split(/\r?\n/) : [],
-    content: imageAttachment ? "image" : null,
-    imageUrl: imageAttachment
-      ? resolveAttachmentUrl(imageAttachment.fileUrl)
-      : null,
-    imageAlt: `${detail.title || summary.title} 첨부 이미지`,
-  };
-}
-
-function normalizeLocalPost(post, profile) {
-  const typeLabels = {
-    task: "\uC791\uC5C5",
-    question: "\uC9C8\uBB38",
-    note: "\uD68C\uC758\uB85D",
-  };
-  const type = typeLabels[post.type] || post.type || "\uAC8C\uC2DC\uAE00";
-  return {
-    id: `local-${post.id}`,
-    detailId: post.id,
-    type,
-    typeClass:
-      post.type === "task"
-        ? "border-primary text-gray-1"
-        : post.type === "question"
-          ? "border-orange text-gray-1"
-          : post.type === "note"
-            ? "border-green text-gray-1"
-            : "border-gray-3 text-gray-1",
-    author: profile.name,
-    initial: profile.name.trim().charAt(0),
-    profileImage: profile.image || "",
-    avatar: "bg-green",
-    time: formatRelativeTime(post.createdAt),
-    title: post.title,
-    description: post.content ? post.content.split(/\r?\n/) : [],
-    comments: 0,
-    reactionCount: 0,
-    content: post.vote ? "poll" : post.coverImage ? "image" : null,
-    imageUrl: post.coverImage || null,
-    imageAlt: `${post.title} \uCCA8\uBD80 \uC774\uBBF8\uC9C0`,
-    pollVote: post.vote || null,
-  };
-}
-
 const subscribeToProjectSelection = (callback) => {
   window.addEventListener("team-selection-changed", callback);
-  return () =>
-    window.removeEventListener("team-selection-changed", callback);
+  return () => window.removeEventListener("team-selection-changed", callback);
 };
 const getSelectedProjectId = () =>
   sessionStorage.getItem("selected_project_id") || "";
+const getSelectedTeamName = () =>
+  sessionStorage.getItem("selected_team_name") || "라이온킹";
+const getSelectedTeamIcon = () =>
+  sessionStorage.getItem("selected_team_icon") || "/icons/Sidebar/lion.svg";
+const getSelectedProjectTitle = () =>
+  sessionStorage.getItem("selected_project_title") ||
+  "AI로 팀원 간의 소통 오류를 없앨 수 있다면?";
 const getServerProjectId = () => "";
+const getServerTeamName = () => "라이온킹";
+const getServerTeamIcon = () => "/icons/Sidebar/lion.svg";
+const getServerProjectTitle = () =>
+  "AI로 팀원 간의 소통 오류를 없앨 수 있다면?";
 
 function SvgSlot({ name, className = "" }) {
   return (
@@ -277,25 +183,47 @@ function BoardHeader({
   );
 }
 
-function ProjectOverview() {
+function formatDeadline(value) {
+  if (!value) return "2026.07.24";
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .format(new Date(value))
+    .replace(/\. /g, ".")
+    .replace(/\.$/, "");
+}
+
+function getDDay(value) {
+  if (!value) return "D-17";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const deadline = new Date(value);
+  deadline.setHours(0, 0, 0, 0);
+  const difference = Math.ceil((deadline - today) / 86400000);
+  if (difference === 0) return "D-DAY";
+  return difference > 0 ? `D-${difference}` : `D+${Math.abs(difference)}`;
+}
+
+function ProjectOverview({ summary, teamName, teamIcon, projectTitle }) {
   return (
     <>
       <header className="flex items-center gap-3 border-b border-gray-5 pb-5">
-        <Image
-          src="/icons/Sidebar/lion.svg"
-          alt="라이온킹"
-          width={42}
-          height={42}
-        />
-        <h1 className="text-[30px] font-bold">라이온킹</h1>
+        <Image src={teamIcon} alt={teamName} width={42} height={42} />
+        <h1 className="text-[30px] font-bold">{teamName}</h1>
       </header>
 
       <section className="mt-5 grid min-h-[210px] grid-cols-[1.1fr_.9fr] items-center gap-12 rounded-[10px] border border-gray-5 px-12 py-8">
         <div>
           <h2 className="text-[23px] font-bold tracking-[-.4px]">
-            AI로 팀원 간의 소통 오류를 없앨 수 있다면?
+            {summary?.title || projectTitle}
           </h2>
-          <DeadlineBadge date="2026.07.24" dDay="D-17" className="mt-4" />
+          <DeadlineBadge
+            date={formatDeadline(summary?.deadline)}
+            dDay={getDDay(summary?.deadline)}
+            className="mt-4"
+          />
         </div>
         <div>
           <p className="text-base font-semibold">전체 진행률</p>
@@ -349,10 +277,13 @@ function ProjectOverview() {
               />
               공지사항
             </h2>
-            <button className="flex items-center gap-2 text-right text-[14px] font-medium leading-[140%] text-gray-2">
+            <Link
+              href="/notice"
+              className="flex items-center gap-2 text-right text-[14px] font-medium leading-[140%] text-gray-2"
+            >
               전체 보기
               <SvgSlot name="arrow" className="h-3 w-[7px]" />
-            </button>
+            </Link>
           </div>
           <ul className="divide-y divide-[#e5e8eb] leading-[1.45]">
             <li className="py-3">
@@ -457,8 +388,10 @@ function PollPreview({ images }) {
 function LocalPollPreview({ vote }) {
   const candidates = vote?.candidates ?? [];
   const responses = vote?.responses ?? [];
-  const counts = candidates.map((_, index) =>
-    responses.filter((response) => response.selections?.includes(index)).length,
+  const counts = candidates.map(
+    (_, index) =>
+      responses.filter((response) => response.selections?.includes(index))
+        .length,
   );
   const total = responses.length;
   const deadline = vote?.deadline
@@ -513,7 +446,9 @@ function LocalPollPreview({ vote }) {
                       style={{ width: `${percent}%` }}
                     />
                   </div>
-                  <span>{counts[index]}명 ({percent}%)</span>
+                  <span>
+                    {counts[index]}명 ({percent}%)
+                  </span>
                 </div>
               </div>
             );
@@ -554,48 +489,73 @@ function MeetingPreview() {
 
 function ReactionModal({ onClose, onSelect }) {
   return (
-      <section
-        role="dialog"
-        aria-labelledby="reaction-modal-title"
-        className="absolute left-0 top-[34px] z-50 w-[214px] rounded-[12px] border border-gray-3 bg-white px-4 pb-4 pt-3 shadow-lg"
-      >
-        <div className="flex items-center justify-between">
-          <h2 id="reaction-modal-title" className="text-xl font-semibold">반응 추가</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="모달 닫기"
-            className="flex h-7 w-7 items-center justify-center text-[30px] font-light leading-none text-gray-3"
-          >
-            ×
-          </button>
-        </div>
-        <div className="mt-3 overflow-hidden rounded-[10px] border border-gray-5">
-          <button type="button" onClick={() => onSelect("complete")} className="flex h-[62px] w-full items-center gap-3 px-3 text-left hover:bg-gray-4">
-            <SvgSlot name="complete" className="h-8 w-8" />
-            <span><strong className="block text-base font-semibold">확인 완료</strong><span className="block text-[10px]">내용 확인했고, 이상 없어요!</span></span>
-          </button>
-          <button type="button" onClick={() => onSelect("review")} className="flex h-[62px] w-full items-center gap-3 border-t border-gray-5 px-3 text-left hover:bg-gray-4">
-            <SvgSlot name="review" className="h-8 w-8" />
-            <span><strong className="block text-base font-semibold">검토 중</strong><span className="block text-[10px]">내용을 확인하고 있어요.</span></span>
-          </button>
-        </div>
-        <p className="mt-3 text-center text-[9px] text-gray-2">반응은 내가 변경하거나 취소할 수 있어요.</p>
-      </section>
+    <section
+      role="dialog"
+      aria-labelledby="reaction-modal-title"
+      className="absolute left-0 top-[34px] z-50 w-[214px] rounded-[12px] border border-gray-3 bg-white px-4 pb-4 pt-3 shadow-lg"
+    >
+      <div className="flex items-center justify-between">
+        <h2 id="reaction-modal-title" className="text-xl font-semibold">
+          반응 추가
+        </h2>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="모달 닫기"
+          className="flex h-7 w-7 items-center justify-center text-[30px] font-light leading-none text-gray-3"
+        >
+          ×
+        </button>
+      </div>
+      <div className="mt-3 overflow-hidden rounded-[10px] border border-gray-5">
+        <button
+          type="button"
+          onClick={() => onSelect("complete")}
+          className="flex h-[62px] w-full items-center gap-3 px-3 text-left hover:bg-gray-4"
+        >
+          <SvgSlot name="complete" className="h-8 w-8" />
+          <span>
+            <strong className="block text-base font-semibold">확인 완료</strong>
+            <span className="block text-[10px]">
+              내용 확인했고, 이상 없어요!
+            </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onSelect("review")}
+          className="flex h-[62px] w-full items-center gap-3 border-t border-gray-5 px-3 text-left hover:bg-gray-4"
+        >
+          <SvgSlot name="review" className="h-8 w-8" />
+          <span>
+            <strong className="block text-base font-semibold">검토 중</strong>
+            <span className="block text-[10px]">내용을 확인하고 있어요.</span>
+          </span>
+        </button>
+      </div>
+      <p className="mt-3 text-center text-[9px] text-gray-2">
+        반응은 내가 변경하거나 취소할 수 있어요.
+      </p>
+    </section>
   );
 }
 
 function PostCard({ post }) {
   const [isReactionModalOpen, setIsReactionModalOpen] = useState(false);
   const [selectedReaction, setSelectedReaction] = useState(null);
-  const [reactionCounts, setReactionCounts] = useState({ complete: 0, review: 0 });
+  const [reactionCounts, setReactionCounts] = useState({
+    complete: 0,
+    review: 0,
+  });
 
   const handleReactionSelect = (reaction) => {
     setReactionCounts((counts) => {
       if (selectedReaction === reaction) return counts;
       return {
         ...counts,
-        ...(selectedReaction && { [selectedReaction]: Math.max(0, counts[selectedReaction] - 1) }),
+        ...(selectedReaction && {
+          [selectedReaction]: Math.max(0, counts[selectedReaction] - 1),
+        }),
         [reaction]: counts[reaction] + 1,
       };
     });
@@ -605,129 +565,134 @@ function PostCard({ post }) {
 
   return (
     <>
-    <article className="relative rounded-[10px] border border-[#dfe3e7] bg-white px-8 py-5">
-      {post.detailId != null && (
-        <Link
-          href={`/posts/${encodeURIComponent(post.detailId)}`}
-          aria-label={`${post.title} 상세 보기`}
-          className="absolute inset-0 z-[1] rounded-[10px]"
-        />
-      )}
-      <button className="absolute right-5 top-4 z-10 h-5 w-6" aria-label="더보기">
-        <SvgSlot name="more" className="h-full w-full" />
-      </button>
-      <span
-        className={`inline-flex rounded-full border px-3 py-1 text-xs ${post.typeClass}`}
-      >
-        {post.type}
-      </span>
-      <div
-        className={`mt-3 grid gap-12 ${
-          post.content
-            ? "grid-cols-[300px_minmax(0,1fr)]"
-            : "grid-cols-1"
-        }`}
-      >
-        <div className="flex min-h-[255px] flex-col">
-          <div className="flex items-center gap-2">
-            <span
-              className={`relative flex h-10 w-10 overflow-hidden items-center justify-center rounded-full text-xl font-bold text-white ${post.avatar}`}
-            >
-              {post.profileImage ? (
-                <Image
-                  src={post.profileImage}
-                  alt={`${post.author} 프로필`}
-                  fill
-                  unoptimized
-                  className="object-cover"
-                />
-              ) : (
-                post.initial
-              )}
-            </span>
-            <strong className="text-xl">{post.author}</strong>
-            <span className="text-xs">{post.time}</span>
-          </div>
-          <h3 className="mt-5 text-[22px] font-bold">{post.title}</h3>
-          <p className="mt-3 text-sm leading-[1.45]">
-            {post.description.map((line) => (
-              <span className="block" key={line}>
-                {line}
-              </span>
-            ))}
-          </p>
-          <div className="relative z-10 mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-            <span className="flex items-center gap-2">
-              <CommentIcon /> {post.comments}
-            </span>
-            {post.reactionCount > 0 && (
-              <span className="flex items-center gap-1.5">
-                <SvgSlot name="reaction" className="h-4 w-4" />
-                반응 {post.reactionCount}
-              </span>
-            )}
-            {(!post.isExample || post.type === "작업") && !selectedReaction && (
-              <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsReactionModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-full border border-[#d8dde2] px-3 py-1"
+      <article className="relative rounded-[10px] border border-[#dfe3e7] bg-white px-8 py-5">
+        {post.detailId != null && (
+          <Link
+            href={`/posts/${encodeURIComponent(post.detailId)}`}
+            aria-label={`${post.title} 상세 보기`}
+            className="absolute inset-0 z-[1] rounded-[10px]"
+          />
+        )}
+        <button
+          className="absolute right-5 top-4 z-10 h-5 w-6"
+          aria-label="더보기"
+        >
+          <SvgSlot name="more" className="h-full w-full" />
+        </button>
+        <span
+          className={`inline-flex rounded-full border px-3 py-1 text-xs ${post.typeClass}`}
+        >
+          {post.type}
+        </span>
+        <div
+          className={`mt-3 grid gap-12 ${
+            post.content ? "grid-cols-[300px_minmax(0,1fr)]" : "grid-cols-1"
+          }`}
+        >
+          <div className="flex min-h-[255px] flex-col">
+            <div className="flex items-center gap-2">
+              <span
+                className={`relative flex h-10 w-10 overflow-hidden items-center justify-center rounded-full text-xl font-bold text-white ${post.avatar}`}
               >
-                <SvgSlot name="reaction" className="h-4 w-4" />
-                반응 추가
-              </button>
-              {isReactionModalOpen && (
-                <ReactionModal
-                  onClose={() => setIsReactionModalOpen(false)}
-                  onSelect={handleReactionSelect}
-                />
+                {post.profileImage ? (
+                  <Image
+                    src={post.profileImage}
+                    alt={`${post.author} 프로필`}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  post.initial
+                )}
+              </span>
+              <strong className="text-xl">{post.author}</strong>
+              <span className="text-xs">{post.time}</span>
+            </div>
+            <h3 className="mt-5 text-[22px] font-bold">{post.title}</h3>
+            <p className="mt-3 text-sm leading-[1.45]">
+              {post.description.map((line) => (
+                <span className="block" key={line}>
+                  {line}
+                </span>
+              ))}
+            </p>
+            <div className="relative z-10 mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+              <span className="flex items-center gap-2">
+                <CommentIcon /> {post.comments}
+              </span>
+              {post.reactionCount > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <SvgSlot name="reaction" className="h-4 w-4" />
+                  반응 {post.reactionCount}
+                </span>
               )}
-              </div>
-            )}
-            {reactionCounts.complete > 0 && (
-              <span className="flex h-[21px] w-[91px] items-center justify-center gap-[5px] text-xs text-green">
-                <SvgSlot name="complete" className="h-[17.5px] w-[17.5px]" />
-                확인 완료 {reactionCounts.complete}
-              </span>
-            )}
-            {reactionCounts.review > 0 && (
-              <span className="flex h-[21px] w-[91px] items-center justify-center gap-[5px] text-xs text-yellow">
-                <SvgSlot name="review" className="h-[17.5px] w-[17.5px]" />
-                검토 중 {reactionCounts.review}
-              </span>
-            )}
-            {post.isExample && post.type === "질문" && (
-              <span className="flex h-[21px] w-[91px] items-center justify-center gap-[5px] text-xs text-yellow">
-                <SvgSlot name="review" className="h-[17.5px] w-[17.5px]" />
-                검토 중 2
-              </span>
-            )}
-            {post.isExample && post.type === "회의록" && (
-              <>
+              {(!post.isExample || post.type === "작업") &&
+                !selectedReaction && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsReactionModalOpen(true)}
+                      className="flex items-center gap-1.5 rounded-full border border-[#d8dde2] px-3 py-1"
+                    >
+                      <SvgSlot name="reaction" className="h-4 w-4" />
+                      반응 추가
+                    </button>
+                    {isReactionModalOpen && (
+                      <ReactionModal
+                        onClose={() => setIsReactionModalOpen(false)}
+                        onSelect={handleReactionSelect}
+                      />
+                    )}
+                  </div>
+                )}
+              {reactionCounts.complete > 0 && (
                 <span className="flex h-[21px] w-[91px] items-center justify-center gap-[5px] text-xs text-green">
                   <SvgSlot name="complete" className="h-[17.5px] w-[17.5px]" />
-                  확인 완료 3
+                  확인 완료 {reactionCounts.complete}
                 </span>
+              )}
+              {reactionCounts.review > 0 && (
                 <span className="flex h-[21px] w-[91px] items-center justify-center gap-[5px] text-xs text-yellow">
                   <SvgSlot name="review" className="h-[17.5px] w-[17.5px]" />
-                  검토 중 1
+                  검토 중 {reactionCounts.review}
                 </span>
-              </>
-            )}
+              )}
+              {post.isExample && post.type === "질문" && (
+                <span className="flex h-[21px] w-[91px] items-center justify-center gap-[5px] text-xs text-yellow">
+                  <SvgSlot name="review" className="h-[17.5px] w-[17.5px]" />
+                  검토 중 2
+                </span>
+              )}
+              {post.isExample && post.type === "회의록" && (
+                <>
+                  <span className="flex h-[21px] w-[91px] items-center justify-center gap-[5px] text-xs text-green">
+                    <SvgSlot
+                      name="complete"
+                      className="h-[17.5px] w-[17.5px]"
+                    />
+                    확인 완료 3
+                  </span>
+                  <span className="flex h-[21px] w-[91px] items-center justify-center gap-[5px] text-xs text-yellow">
+                    <SvgSlot name="review" className="h-[17.5px] w-[17.5px]" />
+                    검토 중 1
+                  </span>
+                </>
+              )}
+            </div>
           </div>
+          {post.content === "image" && (
+            <ImagePreview src={post.imageUrl} alt={post.imageAlt} />
+          )}
+          {post.content === "poll" &&
+            (post.pollVote ? (
+              <LocalPollPreview vote={post.pollVote} />
+            ) : (
+              <PollPreview images={post.pollImages} />
+            ))}
+          {post.content === "meeting" && <MeetingPreview />}
         </div>
-        {post.content === "image" && (
-          <ImagePreview src={post.imageUrl} alt={post.imageAlt} />
-        )}
-        {post.content === "poll" &&
-          (post.pollVote ? (
-            <LocalPollPreview vote={post.pollVote} />
-          ) : (
-            <PollPreview images={post.pollImages} />
-          ))}
-        {post.content === "meeting" && <MeetingPreview />}
-      </div>
-    </article>
+      </article>
     </>
   );
 }
@@ -744,10 +709,8 @@ export default function Home() {
     getProfileSnapshot,
     () => DEFAULT_PROFILE_JSON,
   );
-  const profile = useMemo(
-    () => JSON.parse(profileSnapshot),
-    [profileSnapshot],
-  );
+  const profile = useMemo(() => JSON.parse(profileSnapshot), [profileSnapshot]);
+  const [projectSummary, setProjectSummary] = useState(null);
   const projectId = useSyncExternalStore(
     subscribeToProjectSelection,
     getSelectedProjectId,
@@ -770,6 +733,21 @@ export default function Home() {
       setLocalPosts([]);
     }
   }, [profile]);
+  const teamName = useSyncExternalStore(
+    subscribeToProjectSelection,
+    getSelectedTeamName,
+    getServerTeamName,
+  );
+  const teamIcon = useSyncExternalStore(
+    subscribeToProjectSelection,
+    getSelectedTeamIcon,
+    getServerTeamIcon,
+  );
+  const projectTitle = useSyncExternalStore(
+    subscribeToProjectSelection,
+    getSelectedProjectTitle,
+    getServerProjectTitle,
+  );
 
   useEffect(() => {
     if (!projectId) return;
@@ -791,14 +769,9 @@ export default function Home() {
         const detailedPosts = await Promise.all(
           content.map(async (post) => {
             try {
-              const detailResponse = await api.get(
-                `/api/posts/${post.postId}`,
-              );
+              const detailResponse = await api.get(`/api/posts/${post.postId}`);
               const detailResult = detailResponse.data;
-              if (
-                detailResult?.isSuccess === false ||
-                !detailResult?.data
-              ) {
+              if (detailResult?.isSuccess === false || !detailResult?.data) {
                 return normalizePost(post);
               }
               return normalizePostDetail(detailResult.data, post);
@@ -837,19 +810,43 @@ export default function Home() {
         if (isMounted) setIsPostsLoading(false);
       });
 
+    api
+      .get(`/api/projects/${projectId}`)
+      .then((response) => {
+        const result = response.data;
+        if (
+          isMounted &&
+          result?.isSuccess !== false &&
+          result?.data?.team_name
+        ) {
+          sessionStorage.setItem("selected_team_name", result.data.team_name);
+          window.dispatchEvent(new Event("team-selection-changed"));
+        }
+      })
+      .catch(() => {
+        // 팀 선택 조회가 실패하면 생성 단계에서 저장한 팀명을 유지합니다.
+      });
+
+    api
+      .get(`/api/projects/${projectId}/summary`)
+      .then((response) => {
+        if (isMounted && response.data?.isSuccess !== false) {
+          setProjectSummary(response.data?.data ?? null);
+        }
+      })
+      .catch(() => {
+        // 생성 직후 저장된 프로젝트 ID로 요약을 불러오지 못하면 기본 UI를 유지합니다.
+      });
+
     return () => {
       isMounted = false;
     };
   }, [projectId]);
 
-  const visiblePosts = [
-    ...localPosts,
-    ...(projectId ? projectPosts : posts),
-  ];
+  const visiblePosts = [...localPosts, ...(projectId ? projectPosts : posts)];
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredPosts = visiblePosts.filter((post) => {
-    const matchesFilter =
-      activeFilter === "전체" || post.type === activeFilter;
+    const matchesFilter = activeFilter === "전체" || post.type === activeFilter;
     const matchesSearch =
       !normalizedQuery ||
       post.title.toLowerCase().includes(normalizedQuery) ||
@@ -864,7 +861,12 @@ export default function Home() {
       </div>
       <main className="ml-64 min-w-0 flex-1 overflow-y-auto px-8 py-7">
         <div className="mx-auto w-full max-w-[1180px]">
-          <ProjectOverview />
+          <ProjectOverview
+            summary={projectSummary}
+            teamName={teamName}
+            teamIcon={teamIcon}
+            projectTitle={projectTitle}
+          />
           <div className="mt-10">
             <BoardHeader
               activeFilter={activeFilter}
