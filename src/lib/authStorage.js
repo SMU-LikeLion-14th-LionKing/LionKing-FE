@@ -7,18 +7,15 @@ const PROJECT_SESSION_KEYS = [
   "selected_project_title",
 ];
 
-function getBrowserStorages() {
-  if (typeof window === "undefined") return [];
-  return [window.localStorage, window.sessionStorage];
-}
+const getStorages = () =>
+  typeof window === "undefined"
+    ? []
+    : [window.localStorage, window.sessionStorage];
 
 export function getAuthStorage() {
-  const [local, session] = getBrowserStorages();
-  if (!local || !session) return null;
-
-  if (local.getItem("refresh_token")) return local;
-  if (session.getItem("refresh_token")) return session;
-  return null;
+  return (
+    getStorages().find((storage) => storage.getItem("refresh_token")) ?? null
+  );
 }
 
 export function getAccessToken() {
@@ -43,7 +40,6 @@ export function saveAuthTokens(authData, keepLoggedIn) {
   const storage = keepLoggedIn
     ? window.localStorage
     : window.sessionStorage;
-
   storage.setItem("access_token", authData.access_token);
   storage.setItem("refresh_token", authData.refresh_token);
   if (authData.user_id !== undefined) {
@@ -51,16 +47,15 @@ export function saveAuthTokens(authData, keepLoggedIn) {
   }
 }
 
-export function updateAuthTokens(authData) {
+export function updateAuthTokens({ access_token, refresh_token }) {
   const storage = getAuthStorage();
   if (!storage) return;
-
-  storage.setItem("access_token", authData.access_token);
-  storage.setItem("refresh_token", authData.refresh_token);
+  storage.setItem("access_token", access_token);
+  storage.setItem("refresh_token", refresh_token);
 }
 
 export function clearAuthTokens() {
-  getBrowserStorages().forEach((storage) => {
+  getStorages().forEach((storage) => {
     AUTH_KEYS.forEach((key) => storage.removeItem(key));
   });
 }

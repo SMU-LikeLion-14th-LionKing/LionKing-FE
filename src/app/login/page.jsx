@@ -73,7 +73,11 @@ export default function LoginPage() {
           로그인
         </h1>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <form
+          onSubmit={handleSubmit}
+          autoComplete="off"
+          className="flex flex-col gap-5"
+        >
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-[#4E5968]">이메일</span>
             <input
@@ -87,7 +91,7 @@ export default function LoginPage() {
               className={`login-input h-[53px] w-full rounded-lg px-[25px] text-sm text-gray-1 outline-none placeholder:text-[#A8B0B9] transition-colors focus:ring-2 focus:ring-primary/30 ${
                 hasEmail ? "bg-third" : "bg-gray-4"
               }`}
-              autoComplete="email"
+              autoComplete="off"
             />
           </label>
 
@@ -105,7 +109,7 @@ export default function LoginPage() {
                 className={`login-input h-[53px] w-full rounded-lg px-[25px] pr-14 text-sm text-gray-1 outline-none placeholder:text-[#A8B0B9] transition-colors focus:ring-2 focus:ring-primary/30 ${
                   hasPassword ? "bg-third" : "bg-gray-4"
                 }`}
-                autoComplete="current-password"
+                autoComplete="new-password"
               />
               <button
                 type="button"

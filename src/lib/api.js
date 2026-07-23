@@ -6,24 +6,18 @@ import {
   updateAuthTokens,
 } from "./authStorage";
 
-const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(
-  /\/$/,
-  "",
-);
-
+const baseURL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
 const api = axios.create({
-  baseURL: apiBaseUrl,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL,
+  headers: { "Content-Type": "application/json" },
 });
 
 let refreshPromise = null;
 
 api.interceptors.request.use((config) => {
-  const accessToken = getAccessToken();
-  if (accessToken && !config.headers.Authorization) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
+  const token = getAccessToken();
+  if (token && !config.headers.Authorization) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
@@ -31,23 +25,19 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-    const isUnauthorized =
-      error.response?.status === 401 || error.response?.status === 403;
-    const isReissueRequest = originalRequest?.url?.includes(
-      "/api/auth/reissue",
-    );
+    const request = error.config;
+    const status = error.response?.status;
+    const isAuthFailure = status === 401 || status === 403;
     const isPublicAuthRequest = [
       "/api/auth/login",
       "/api/auth/signup",
       "/api/auth/me/password",
-    ].some((path) => originalRequest?.url?.includes(path));
-
+    ].some((path) => request?.url?.includes(path));
     if (
-      !isUnauthorized ||
-      !originalRequest ||
-      originalRequest._retry ||
-      isReissueRequest ||
+      !isAuthFailure ||
+      !request ||
+      request._retry ||
+      request.url?.includes("/api/auth/reissue") ||
       isPublicAuthRequest
     ) {
       return Promise.reject(error);
@@ -60,24 +50,18 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    originalRequest._retry = true;
-
+    request._retry = true;
     try {
       if (!refreshPromise) {
         refreshPromise = axios
-          .post(`${apiBaseUrl}/api/auth/reissue`, {
-            refreshToken,
-          })
-          .then((response) => {
-            const result = response.data;
+          .post(`${baseURL}/api/auth/reissue`, { refreshToken })
+          .then(({ data: result }) => {
             if (
               result?.isSuccess === false ||
               !result?.data?.access_token ||
               !result?.data?.refresh_token
             ) {
-              throw new Error(
-                result?.message || "토큰 재발급에 실패했습니다.",
-              );
+              throw new Error(result?.message || "토큰 재발급 실패");
             }
             updateAuthTokens(result.data);
             return result.data.access_token;
@@ -87,9 +71,9 @@ api.interceptors.response.use(
           });
       }
 
-      const newAccessToken = await refreshPromise;
-      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-      return api(originalRequest);
+      const accessToken = await refreshPromise;
+      request.headers.Authorization = `Bearer ${accessToken}`;
+      return api(request);
     } catch (refreshError) {
       clearAuthTokens();
       if (typeof window !== "undefined") window.location.assign("/login");

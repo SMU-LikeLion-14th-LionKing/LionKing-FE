@@ -6,11 +6,10 @@ export default function SidebarItem({
   icon,
   active = false,
   href,
+  onClick,
 }) {
   const className = `flex w-full items-center gap-2 border px-2 py-2 text-left ${
-    active
-      ? "border-blue-200 bg-blue-50"
-      : "border-transparent hover:bg-gray-4"
+    active ? "border-blue-200 bg-blue-50" : "border-transparent hover:bg-gray-4"
   }`;
   const content = (
     <>
