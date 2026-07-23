@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useId, useState } from "react";
+import { useState } from "react";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import AiSuggestion from "./AiSuggestion";
 import DateTimePicker, { formatDateTime } from "./DateTimePicker";
@@ -17,7 +17,6 @@ const postTypes = [
 export default function PostCreatePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const generatedId = useId();
   const editId = searchParams.get("edit");
   const [restoredDraft] = useState(() => {
     if (searchParams.get("restore") !== "1" || typeof window === "undefined") return null;
@@ -43,10 +42,10 @@ export default function PostCreatePage() {
     if (!isValid) return;
     const storedPosts = JSON.parse(localStorage.getItem("lionking-posts") ?? "[]");
     const coverImage = files.find((file) => typeof file === "object" && file.preview)?.preview ?? null;
-    const post = { id: editId ?? generatedId, type, title: title.trim(), content: content.trim(), files: files.map((file) => typeof file === "string" ? { name: file } : file), coverImage, vote: type === "question" ? vote : null, meetingDate: type === "note" ? meetingDate?.toISOString() : null, createdAt: storedEdit?.createdAt ?? new Date().toISOString() };
+    const post = { id: editId ?? crypto.randomUUID(), type, title: title.trim(), content: content.trim(), files: files.map((file) => typeof file === "string" ? { name: file } : file), coverImage, vote: type === "question" ? vote : null, meetingDate: type === "note" ? meetingDate?.toISOString() : null, createdAt: storedEdit?.createdAt ?? new Date().toISOString() };
     const nextPosts = editId ? storedPosts.map((item) => item.id === editId ? post : item) : [post, ...storedPosts];
     localStorage.setItem("lionking-posts", JSON.stringify(nextPosts));
-    router.push("/dashboard");
+    router.push("/main");
   };
   const openVoteEditor = () => {
     sessionStorage.setItem("lionking-post-draft", JSON.stringify({ type: "question", title, content, files, vote, editId }));

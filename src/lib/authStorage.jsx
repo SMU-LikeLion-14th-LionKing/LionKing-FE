@@ -1,4 +1,10 @@
 const AUTH_KEYS = ["access_token", "refresh_token", "user_id"];
+const PROJECT_SELECTION_KEYS = [
+  "selected_project_id",
+  "selected_team_name",
+  "selected_team_icon",
+  "selected_project_title",
+];
 
 function getBrowserStorages() {
   if (typeof window === "undefined") return [];
@@ -26,6 +32,7 @@ export function saveAuthTokens(authData, keepLoggedIn) {
   if (typeof window === "undefined") return;
 
   clearAuthTokens();
+  PROJECT_SELECTION_KEYS.forEach((key) => sessionStorage.removeItem(key));
   const storage = keepLoggedIn
     ? window.localStorage
     : window.sessionStorage;
