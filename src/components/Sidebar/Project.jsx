@@ -43,10 +43,7 @@ export default function Project() {
       sessionStorage.removeItem("selected_project_id");
     }
     sessionStorage.setItem("selected_team_name", team.teamName);
-    sessionStorage.setItem(
-      "selected_project_title",
-      team.projectTitle || "",
-    );
+    sessionStorage.setItem("selected_project_title", team.projectTitle || "");
     window.dispatchEvent(new Event("team-selection-changed"));
     window.location.assign("/main");
   };

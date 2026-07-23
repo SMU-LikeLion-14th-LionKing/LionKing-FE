@@ -1,5 +1,13 @@
 import Sidebar from "@/components/Sidebar/Sidebar";
+import DashboardPosts from "@/components/Posts/DashboardPosts";
 
 export default function DashboardPage() {
-  return <Sidebar />;
+  return (
+    <div className="min-h-screen bg-white">
+      <Sidebar />
+      <main className="ml-64 min-h-screen">
+        <DashboardPosts />
+      </main>
+    </div>
+  );
 }
