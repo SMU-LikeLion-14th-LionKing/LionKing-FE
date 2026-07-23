@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import api from "@/lib/api";
+import { saveAuthTokens } from "@/lib/authStorage";
 import Button from "@/components/common/Button";
 import Checkbox from "@/components/common/Checkbox";
 import Icon from "@/components/common/Icon";
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
 
@@ -28,11 +30,7 @@ export default function LoginPage() {
     setLoginError("");
 
     try {
-      const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(
-        /\/$/,
-        "",
-      );
-      const response = await axios.post(`${apiBaseUrl}/api/auth/login`, {
+      const response = await api.post("/api/auth/login", {
         email: email.trim(),
         password,
       });
@@ -47,11 +45,7 @@ export default function LoginPage() {
         throw new Error("로그인 응답에 토큰이 없습니다.");
       }
 
-      localStorage.setItem("access_token", authData.access_token);
-      localStorage.setItem("refresh_token", authData.refresh_token);
-      if (authData.user_id !== undefined) {
-        localStorage.setItem("user_id", String(authData.user_id));
-      }
+      saveAuthTokens(authData, keepLoggedIn);
 
       router.replace("/main");
     } catch (error) {
@@ -127,6 +121,8 @@ export default function LoginPage() {
           <div className="-mt-2 flex items-center justify-between">
             <Checkbox
               label="로그인 상태 유지"
+              checked={keepLoggedIn}
+              onChange={(event) => setKeepLoggedIn(event.target.checked)}
               size={14}
               className="gap-1.5 text-sm font-normal leading-[1.4] text-[#4E5968] [&>span>span]:rounded-[3px] [&>span>span]:border"
             />

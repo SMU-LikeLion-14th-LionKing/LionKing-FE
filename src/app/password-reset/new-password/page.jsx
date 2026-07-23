@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import api from "@/lib/api";
 import Button from "@/components/common/Button";
 import Icon from "@/components/common/Icon";
 
@@ -76,12 +76,8 @@ export default function NewPasswordPage() {
     setResetError("");
 
     try {
-      const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(
-        /\/$/,
-        "",
-      );
-      const response = await axios.post(
-        `${apiBaseUrl}/api/auth/me/password`,
+      const response = await api.post(
+        "/api/auth/me/password",
         {
           email,
           verification_code: verificationCode,
