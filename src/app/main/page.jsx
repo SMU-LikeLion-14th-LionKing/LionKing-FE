@@ -96,6 +96,11 @@ const CATEGORY_CLASS = {
   회의록: "border-green text-gray-1",
 };
 
+const REACTION_TYPE_MAP = {
+  complete: "CONFIRMED",
+  review: "REVIEWING",
+};
+
 function formatRelativeTime(value) {
   if (!value) return "";
   const difference = Date.now() - new Date(value).getTime();
@@ -114,8 +119,7 @@ function normalizePost(post) {
     id: post.postId,
     detailId: post.postId,
     type: post.categoryName || "게시글",
-    typeClass:
-      CATEGORY_CLASS[post.categoryName] || "border-gray-3 text-gray-1",
+    typeClass: CATEGORY_CLASS[post.categoryName] || "border-gray-3 text-gray-1",
     author: authorName,
     initial: authorName.slice(0, 1),
     avatar: "bg-[#37bea1]",
@@ -421,7 +425,6 @@ function ImagePreview({ src, alt }) {
   return (
     <div className="relative min-h-[278px] overflow-hidden bg-[#eaf7f2]">
       {src ? (
-        // API가 반환하는 이미지 URL을 그대로 표시하는 영역입니다.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
@@ -452,7 +455,6 @@ function PollPreview({ images }) {
               className="relative h-[112px] w-[138px] overflow-hidden bg-[#dfe3e7]"
             >
               {image.imageUrl ? (
-                // API가 반환하는 후보 이미지 URL을 표시합니다.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={image.imageUrl}
@@ -586,23 +588,61 @@ function MeetingPreview() {
       <p className="mt-4">
         💡 핵심 논의
         <br />
-        　· 총 6개의 서비스명을 비교
-        <br />
-        　· 의미 전달력과 서비스 컨셉을 중심으로 의견 공유
+        · 총 6개의 서비스명을 비교
+        <br />· 의미 전달력과 서비스 컨셉을 중심으로 의견 공유
       </p>
       <p className="mt-4">
         🗳️ 투표 결과
         <br />
-        　· 1차: 티키타카 4표 / 디토크 4표 / 팀플리 4표
-        <br />
-        　· 2차: 디토크 2표 / 팀플리 3표
+        · 1차: 티키타카 4표 / 디토크 4표 / 팀플리 4표
+        <br />· 2차: 디토크 2표 / 팀플리 3표
       </p>
       <p className="mt-4">🏆 최종 결과 → 팀플리 당선</p>
     </div>
   );
 }
 
-function ReactionModal({ onClose, onSelect }) {
+function ReactionModal({ postId, onClose, onSelect }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSelectReaction = async (typeKey) => {
+    if (isLoading) return;
+
+    const reactionType = REACTION_TYPE_MAP[typeKey];
+
+    if (!postId) {
+      if (onSelect) onSelect(typeKey);
+      if (onClose) onClose();
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const response = await api.put(`/api/posts/${postId}/reactions`, {
+        reactionType,
+      });
+
+      const result = response.data;
+
+      if (result?.isSuccess !== false) {
+        if (onSelect) onSelect(typeKey, result?.data);
+        if (onClose) onClose();
+      } else {
+        throw new Error(result?.message || "반응 처리에 실패했습니다.");
+      }
+    } catch (err) {
+      console.error("게시글 반응 API 오류:", err);
+      setError(
+        err.response?.data?.message || err.message || "오류가 발생했습니다.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <section
       role="dialog"
@@ -616,8 +656,9 @@ function ReactionModal({ onClose, onSelect }) {
         <button
           type="button"
           onClick={onClose}
+          disabled={isLoading}
           aria-label="모달 닫기"
-          className="flex h-7 w-7 items-center justify-center text-[30px] font-light leading-none text-gray-3"
+          className="flex h-7 w-7 items-center justify-center text-[30px] font-light leading-none text-gray-3 hover:text-gray-1 disabled:opacity-50"
         >
           ×
         </button>
@@ -625,8 +666,9 @@ function ReactionModal({ onClose, onSelect }) {
       <div className="mt-3 overflow-hidden rounded-[10px] border border-gray-5">
         <button
           type="button"
-          onClick={() => onSelect("complete")}
-          className="flex h-[62px] w-full items-center gap-3 px-3 text-left hover:bg-gray-4"
+          disabled={isLoading}
+          onClick={() => handleSelectReaction("complete")}
+          className="flex h-[62px] w-full items-center gap-3 px-3 text-left hover:bg-gray-4 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <SvgSlot name="complete" className="h-8 w-8" />
           <span>
@@ -638,8 +680,9 @@ function ReactionModal({ onClose, onSelect }) {
         </button>
         <button
           type="button"
-          onClick={() => onSelect("review")}
-          className="flex h-[62px] w-full items-center gap-3 border-t border-gray-5 px-3 text-left hover:bg-gray-4"
+          disabled={isLoading}
+          onClick={() => handleSelectReaction("review")}
+          className="flex h-[62px] w-full items-center gap-3 border-t border-gray-5 px-3 text-left hover:bg-gray-4 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <SvgSlot name="review" className="h-8 w-8" />
           <span>
@@ -648,9 +691,14 @@ function ReactionModal({ onClose, onSelect }) {
           </span>
         </button>
       </div>
-      <p className="mt-3 text-center text-[9px] text-gray-2">
-        반응은 내가 변경하거나 취소할 수 있어요.
-      </p>
+
+      {error ? (
+        <p className="mt-2 text-center text-[10px] text-red-500">{error}</p>
+      ) : (
+        <p className="mt-3 text-center text-[9px] text-gray-2">
+          반응은 내가 변경하거나 취소할 수 있어요.
+        </p>
+      )}
     </section>
   );
 }
@@ -726,8 +774,8 @@ function PostCard({ post }) {
             </div>
             <h3 className="mt-5 text-[22px] font-bold">{post.title}</h3>
             <p className="mt-3 text-sm leading-[1.45]">
-              {post.description.map((line) => (
-                <span className="block" key={line}>
+              {post.description.map((line, index) => (
+                <span className="block" key={`${line}-${index}`}>
                   {line}
                 </span>
               ))}
@@ -755,6 +803,7 @@ function PostCard({ post }) {
                     </button>
                     {isReactionModalOpen && (
                       <ReactionModal
+                        postId={post.detailId}
                         onClose={() => setIsReactionModalOpen(false)}
                         onSelect={handleReactionSelect}
                       />
@@ -841,8 +890,6 @@ export default function Home() {
       const storedPosts = JSON.parse(
         localStorage.getItem("lionking-posts") ?? "[]",
       );
-      // localStorage는 클라이언트 마운트 이후에만 읽어 hydration 차이를 방지합니다.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalPosts(
         Array.isArray(storedPosts)
           ? storedPosts.map((post) => normalizeLocalPost(post, profile))
@@ -852,6 +899,7 @@ export default function Home() {
       setLocalPosts([]);
     }
   }, [profile]);
+
   const teamName = useSyncExternalStore(
     subscribeToProjectSelection,
     getSelectedTeamName,
@@ -930,9 +978,7 @@ export default function Home() {
           window.dispatchEvent(new Event("team-selection-changed"));
         }
       })
-      .catch(() => {
-        // 팀 선택 조회가 실패하면 생성 단계에서 저장한 팀명을 유지합니다.
-      });
+      .catch(() => {});
 
     api
       .get(`/api/projects/${projectId}/summary`)
@@ -941,9 +987,7 @@ export default function Home() {
           setProjectSummary(response.data?.data ?? null);
         }
       })
-      .catch(() => {
-        // 생성 직후 저장된 프로젝트 ID로 요약을 불러오지 못하면 기본 UI를 유지합니다.
-      });
+      .catch(() => {});
 
     api
       .get(`/api/projects/${projectId}/notice/recent`)
@@ -970,71 +1014,62 @@ export default function Home() {
     };
   }, [projectId]);
 
-  const visiblePosts = [...localPosts, ...(projectId ? projectPosts : posts)];
-  const normalizedQuery = searchQuery.trim().toLowerCase();
-  const filteredPosts = visiblePosts.filter((post) => {
-    const matchesFilter = activeFilter === "전체" || post.type === activeFilter;
-    const matchesSearch =
-      !normalizedQuery ||
-      post.title.toLowerCase().includes(normalizedQuery) ||
-      post.author.toLowerCase().includes(normalizedQuery);
-    return matchesFilter && matchesSearch;
-  });
+  const visiblePosts = useMemo(() => {
+    const combined = [...localPosts, ...(projectId ? projectPosts : posts)];
+    return combined.filter((post) => {
+      const matchesFilter =
+        activeFilter === "전체" || post.type === activeFilter;
+      const matchesSearch =
+        !searchQuery.trim() ||
+        post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.author.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
+  }, [localPosts, projectId, projectPosts, activeFilter, searchQuery]);
 
   return (
-    <div className="flex h-screen min-w-[1180px] overflow-hidden bg-white text-[#111]">
-      <div className="shrink-0">
+    <div className="min-h-screen bg-white">
+      <div className="flex">
         <Sidebar />
-      </div>
-      <main className="ml-64 min-w-0 flex-1 overflow-y-auto px-8 py-7">
-        <div className="mx-auto w-full max-w-[1180px]">
+        <main className="flex-1 px-12 py-10">
           <ProjectOverview
             summary={projectSummary}
             teamName={teamName}
             teamIcon={teamIcon}
             projectTitle={projectTitle}
-            recentNotices={
-              recentNoticeState.projectId === String(projectId)
-                ? recentNoticeState.items
-                : []
-            }
+            recentNotices={recentNoticeState.items}
           />
-          <div className="mt-10">
+          <div className="mt-8 space-y-6">
             <BoardHeader
               activeFilter={activeFilter}
               onFilterChange={setActiveFilter}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
             />
-          </div>
-          <section className="mt-4 space-y-6 pb-10">
-            {projectId && isPostsLoading && (
-              <div className="rounded-[10px] border border-gray-5 px-8 py-12 text-center text-sm text-gray-2">
-                게시글을 불러오는 중입니다.
+
+            {isPostsLoading && projectId && (
+              <div className="py-8 text-center text-gray-2">
+                게시글을 불러오는 중...
               </div>
             )}
+
             {postsError && (
-              <div
-                role="alert"
-                className="rounded-[10px] border border-error/30 px-8 py-6 text-sm text-error"
-              >
+              <div className="py-4 text-center text-sm text-red-500">
                 {postsError}
               </div>
             )}
-            {!isPostsLoading &&
-              !postsError &&
-              projectId &&
-              filteredPosts.length === 0 && (
-                <div className="rounded-[10px] border border-gray-5 px-8 py-12 text-center text-sm text-gray-2">
-                  표시할 게시글이 없습니다.
-                </div>
-              )}
-            {filteredPosts.map((post) => (
-              <PostCard key={post.id ?? post.type} post={post} />
-            ))}
-          </section>
-        </div>
-      </main>
+
+            <div className="space-y-4">
+              {visiblePosts.map((post, index) => (
+                <PostCard
+                  key={post.id || post.detailId || `post-${index}`}
+                  post={post}
+                />
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

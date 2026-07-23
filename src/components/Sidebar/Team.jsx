@@ -21,8 +21,7 @@ const subscribeToTeams = (callback) => {
   window.addEventListener("team-selection-changed", callback);
   return () => window.removeEventListener("team-selection-changed", callback);
 };
-const getTeamsSnapshot = () =>
-  sessionStorage.getItem("project_teams") || "[]";
+const getTeamsSnapshot = () => sessionStorage.getItem("project_teams") || "[]";
 const getServerTeamsSnapshot = () => "[]";
 
 function TeamItem({ team, onSelect }) {
@@ -80,10 +79,7 @@ export default function Team() {
     }
     sessionStorage.setItem("selected_team_name", team.teamName);
     sessionStorage.setItem("selected_team_icon", team.icon);
-    sessionStorage.setItem(
-      "selected_project_title",
-      team.projectTitle || "",
-    );
+    sessionStorage.setItem("selected_project_title", team.projectTitle || "");
     window.dispatchEvent(new Event("team-selection-changed"));
   };
 
