@@ -40,7 +40,6 @@ export function saveAuthTokens(authData, keepLoggedIn) {
   }
 
   clearAuthTokens();
-  PROJECT_SELECTION_KEYS.forEach((key) => sessionStorage.removeItem(key));
   const storage = keepLoggedIn ? window.localStorage : window.sessionStorage;
 
   storage.setItem("access_token", authData.access_token);

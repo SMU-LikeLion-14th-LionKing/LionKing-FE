@@ -90,6 +90,110 @@ const posts = [
   },
 ];
 
+const CATEGORY_CLASS = {
+  작업: "border-primary text-gray-1",
+  질문: "border-orange text-gray-1",
+  회의록: "border-green text-gray-1",
+};
+
+function formatRelativeTime(value) {
+  if (!value) return "";
+  const difference = Date.now() - new Date(value).getTime();
+  const minutes = Math.max(0, Math.floor(difference / 60000));
+  if (minutes < 1) return "방금 전";
+  if (minutes < 60) return `${minutes}분 전`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "어제" : `${days}일 전`;
+}
+
+function normalizePost(post) {
+  const authorName = post.author?.name || "알 수 없음";
+  return {
+    id: post.postId,
+    detailId: post.postId,
+    type: post.categoryName || "게시글",
+    typeClass:
+      CATEGORY_CLASS[post.categoryName] || "border-gray-3 text-gray-1",
+    author: authorName,
+    initial: authorName.slice(0, 1),
+    avatar: "bg-[#37bea1]",
+    time: formatRelativeTime(post.createdAt),
+    title: post.title,
+    description: [],
+    comments: post.commentCount ?? 0,
+    reactionCount: post.reactionCount ?? 0,
+    content: null,
+  };
+}
+
+function resolveAttachmentUrl(fileUrl) {
+  if (!fileUrl || /^https?:\/\//i.test(fileUrl)) return fileUrl;
+  const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(
+    /\/$/,
+    "",
+  );
+  return `${apiBaseUrl}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
+}
+
+function normalizePostDetail(detail, summary) {
+  const basePost = normalizePost({ ...summary, ...detail });
+  const attachments = Array.isArray(detail.attachments)
+    ? detail.attachments
+    : [];
+  const imageAttachment = attachments.find(
+    (attachment) =>
+      attachment.fileType?.toLowerCase().startsWith("image") ||
+      /\.(png|jpe?g|gif|webp|svg)$/i.test(attachment.fileUrl || ""),
+  );
+
+  return {
+    ...basePost,
+    description: detail.content ? detail.content.split(/\r?\n/) : [],
+    content: imageAttachment ? "image" : null,
+    imageUrl: imageAttachment
+      ? resolveAttachmentUrl(imageAttachment.fileUrl)
+      : null,
+    imageAlt: `${detail.title || summary.title} 첨부 이미지`,
+  };
+}
+
+function normalizeLocalPost(post, profile) {
+  const typeLabels = {
+    task: "작업",
+    question: "질문",
+    note: "회의록",
+  };
+  const type = typeLabels[post.type] || post.type || "게시글";
+  return {
+    id: `local-${post.id}`,
+    detailId: post.id,
+    type,
+    typeClass:
+      post.type === "task"
+        ? "border-primary text-gray-1"
+        : post.type === "question"
+          ? "border-orange text-gray-1"
+          : post.type === "note"
+            ? "border-green text-gray-1"
+            : "border-gray-3 text-gray-1",
+    author: profile.name,
+    initial: profile.name.trim().charAt(0),
+    profileImage: profile.image || "",
+    avatar: "bg-green",
+    time: formatRelativeTime(post.createdAt),
+    title: post.title,
+    description: post.content ? post.content.split(/\r?\n/) : [],
+    comments: 0,
+    reactionCount: 0,
+    content: post.vote ? "poll" : post.coverImage ? "image" : null,
+    imageUrl: post.coverImage || null,
+    imageAlt: `${post.title} 첨부 이미지`,
+    pollVote: post.vote || null,
+  };
+}
+
 const subscribeToProjectSelection = (callback) => {
   window.addEventListener("team-selection-changed", callback);
   return () => window.removeEventListener("team-selection-changed", callback);
@@ -206,7 +310,13 @@ function getDDay(value) {
   return difference > 0 ? `D-${difference}` : `D+${Math.abs(difference)}`;
 }
 
-function ProjectOverview({ summary, teamName, teamIcon, projectTitle }) {
+function ProjectOverview({
+  summary,
+  teamName,
+  teamIcon,
+  projectTitle,
+  recentNotices,
+}) {
   return (
     <>
       <header className="flex items-center gap-3 border-b border-gray-5 pb-5">
@@ -286,15 +396,20 @@ function ProjectOverview({ summary, teamName, teamIcon, projectTitle }) {
             </Link>
           </div>
           <ul className="divide-y divide-[#e5e8eb] leading-[1.45]">
-            <li className="py-3">
-              · 7/24(수) 18:00 최종 발표
-              <br />└ 7/22까지 발표 시연 영상 제출
-            </li>
-            <li className="py-3">· 7/14 회의 장소 변경 - 공학관 205</li>
-            <li className="py-3">
-              · API 명세서 공유
-              <br />└ 7/14까지 첨부파일 확인
-            </li>
+            {recentNotices.length > 0 ? (
+              recentNotices.map((notice) => (
+                <li key={notice.postId} className="flex gap-2 py-3">
+                  <span aria-hidden="true">·</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {notice.title}
+                  </span>
+                </li>
+              ))
+            ) : (
+              <li className="py-8 text-center text-gray-2">
+                등록된 공지사항이 없습니다.
+              </li>
+            )}
           </ul>
         </section>
       </div>
@@ -711,6 +826,10 @@ export default function Home() {
   );
   const profile = useMemo(() => JSON.parse(profileSnapshot), [profileSnapshot]);
   const [projectSummary, setProjectSummary] = useState(null);
+  const [recentNoticeState, setRecentNoticeState] = useState({
+    projectId: "",
+    items: [],
+  });
   const projectId = useSyncExternalStore(
     subscribeToProjectSelection,
     getSelectedProjectId,
@@ -787,18 +906,6 @@ export default function Home() {
       })
       .catch((requestError) => {
         if (isMounted) {
-          if (requestError.response?.status === 403) {
-            [
-              "selected_project_id",
-              "selected_team_name",
-              "selected_team_icon",
-              "selected_project_title",
-            ].forEach((key) => sessionStorage.removeItem(key));
-            setProjectPosts([]);
-            setPostsError("");
-            window.dispatchEvent(new Event("team-selection-changed"));
-            return;
-          }
           setPostsError(
             requestError.response?.data?.message ||
               requestError.message ||
@@ -838,6 +945,26 @@ export default function Home() {
         // 생성 직후 저장된 프로젝트 ID로 요약을 불러오지 못하면 기본 UI를 유지합니다.
       });
 
+    api
+      .get(`/api/projects/${projectId}/notice/recent`)
+      .then((response) => {
+        const result = response.data;
+        if (isMounted && result?.isSuccess !== false) {
+          setRecentNoticeState({
+            projectId: String(projectId),
+            items: Array.isArray(result?.data) ? result.data : [],
+          });
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setRecentNoticeState({
+            projectId: String(projectId),
+            items: [],
+          });
+        }
+      });
+
     return () => {
       isMounted = false;
     };
@@ -866,6 +993,11 @@ export default function Home() {
             teamName={teamName}
             teamIcon={teamIcon}
             projectTitle={projectTitle}
+            recentNotices={
+              recentNoticeState.projectId === String(projectId)
+                ? recentNoticeState.items
+                : []
+            }
           />
           <div className="mt-10">
             <BoardHeader
