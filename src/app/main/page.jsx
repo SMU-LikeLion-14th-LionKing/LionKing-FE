@@ -890,6 +890,8 @@ export default function Home() {
       const storedPosts = JSON.parse(
         localStorage.getItem("lionking-posts") ?? "[]",
       );
+      // localStorage는 클라이언트 마운트 이후에만 읽어 hydration 차이를 방지합니다.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalPosts(
         Array.isArray(storedPosts)
           ? storedPosts.map((post) => normalizeLocalPost(post, profile))
@@ -1030,42 +1032,46 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       <div className="flex">
-        <Sidebar />
-        <main className="flex-1 px-12 py-10">
-          <ProjectOverview
-            summary={projectSummary}
-            teamName={teamName}
-            teamIcon={teamIcon}
-            projectTitle={projectTitle}
-            recentNotices={recentNoticeState.items}
-          />
-          <div className="mt-8 space-y-6">
-            <BoardHeader
-              activeFilter={activeFilter}
-              onFilterChange={setActiveFilter}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
+        <div className="w-64 shrink-0">
+          <Sidebar />
+        </div>
+        <main className="min-w-0 flex-1 px-8 py-10">
+          <div className="w-full">
+            <ProjectOverview
+              summary={projectSummary}
+              teamName={teamName}
+              teamIcon={teamIcon}
+              projectTitle={projectTitle}
+              recentNotices={recentNoticeState.items}
             />
+            <div className="mt-8 space-y-6">
+              <BoardHeader
+                activeFilter={activeFilter}
+                onFilterChange={setActiveFilter}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+              />
 
-            {isPostsLoading && projectId && (
-              <div className="py-8 text-center text-gray-2">
-                게시글을 불러오는 중...
+              {isPostsLoading && projectId && (
+                <div className="py-8 text-center text-gray-2">
+                  게시글을 불러오는 중...
+                </div>
+              )}
+
+              {postsError && (
+                <div className="py-4 text-center text-sm text-red-500">
+                  {postsError}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {visiblePosts.map((post, index) => (
+                  <PostCard
+                    key={post.id || post.detailId || `post-${index}`}
+                    post={post}
+                  />
+                ))}
               </div>
-            )}
-
-            {postsError && (
-              <div className="py-4 text-center text-sm text-red-500">
-                {postsError}
-              </div>
-            )}
-
-            <div className="space-y-4">
-              {visiblePosts.map((post, index) => (
-                <PostCard
-                  key={post.id || post.detailId || `post-${index}`}
-                  post={post}
-                />
-              ))}
             </div>
           </div>
         </main>

@@ -32,14 +32,14 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    const isUnauthorized =
-      error.response?.status === 401 || error.response?.status === 403;
-    const isReissueRequest = originalRequest?.url?.includes(
-      "/api/auth/reissue",
-    );
+    const isUnauthorized = error.response?.status === 401;
+    const isReissueRequest =
+      originalRequest?.url?.includes("/api/auth/reissue");
     const isPublicAuthRequest = [
       "/api/auth/login",
       "/api/auth/signup",
+      "/api/auth/password/send-code",
+      "/api/auth/password/verify-code",
       "/api/auth/me/password",
     ].some((path) => originalRequest?.url?.includes(path));
 
@@ -75,9 +75,7 @@ api.interceptors.response.use(
               !result?.data?.access_token ||
               !result?.data?.refresh_token
             ) {
-              throw new Error(
-                result?.message || "토큰 재발급에 실패했습니다.",
-              );
+              throw new Error(result?.message || "토큰 재발급에 실패했습니다.");
             }
             updateAuthTokens(result.data);
             return result.data.access_token;

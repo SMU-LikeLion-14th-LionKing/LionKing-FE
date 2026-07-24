@@ -10,8 +10,7 @@ const PAGE_SIZE = 10;
 
 const subscribeToProjectSelection = (callback) => {
   window.addEventListener("team-selection-changed", callback);
-  return () =>
-    window.removeEventListener("team-selection-changed", callback);
+  return () => window.removeEventListener("team-selection-changed", callback);
 };
 const getSelectedProjectId = () =>
   sessionStorage.getItem("selected_project_id") || "";
@@ -135,12 +134,7 @@ export default function ProjectNoticesPage() {
       <main className="min-w-0 flex-1 overflow-y-auto px-8 py-9">
         <section className="mx-auto w-full max-w-[1080px]">
           <header className="flex items-center gap-3">
-            <Image
-              src={teamIcon}
-              alt=""
-              width={38}
-              height={38}
-            />
+            <Image src={teamIcon} alt="" width={38} height={38} />
             <h1 className="text-[32px] font-bold tracking-[-0.7px] text-gray-1">
               {teamName}
             </h1>
