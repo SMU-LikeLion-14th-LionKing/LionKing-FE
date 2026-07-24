@@ -109,17 +109,15 @@ const subscribeToProjectSelection = (callback) => {
 const getSelectedProjectId = () =>
   sessionStorage.getItem("selected_project_id") || "";
 const getSelectedTeamName = () =>
-  sessionStorage.getItem("selected_team_name") || "라이온킹";
+  sessionStorage.getItem("selected_team_name") || "";
 const getSelectedTeamIcon = () =>
   sessionStorage.getItem("selected_team_icon") || "/icons/Sidebar/lion.svg";
 const getSelectedProjectTitle = () =>
-  sessionStorage.getItem("selected_project_title") ||
-  "AI로 팀원 간의 소통 오류를 없앨 수 있다면?";
+  sessionStorage.getItem("selected_project_title") || "";
 const getServerProjectId = () => "";
-const getServerTeamName = () => "라이온킹";
+const getServerTeamName = () => "";
 const getServerTeamIcon = () => "/icons/Sidebar/lion.svg";
-const getServerProjectTitle = () =>
-  "AI로 팀원 간의 소통 오류를 없앨 수 있다면?";
+const getServerProjectTitle = () => "";
 
 function SvgSlot({ name, className = "" }) {
   return (
@@ -196,7 +194,7 @@ function BoardHeader({
 }
 
 function formatDeadline(value) {
-  if (!value) return "2026.07.24";
+  if (!value) return "";
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "2-digit",
@@ -208,7 +206,7 @@ function formatDeadline(value) {
 }
 
 function getDDay(value) {
-  if (!value) return "D-17";
+  if (!value) return "";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const deadline = new Date(value);
@@ -254,11 +252,13 @@ function ProjectOverview({
           <h2 className="text-[23px] font-bold tracking-[-.4px]">
             {summary?.title || projectTitle}
           </h2>
-          <DeadlineBadge
-            date={formatDeadline(summary?.deadline)}
-            dDay={getDDay(summary?.deadline)}
-            className="mt-4"
-          />
+          {summary?.deadline && (
+            <DeadlineBadge
+              date={formatDeadline(summary.deadline)}
+              dDay={getDDay(summary.deadline)}
+              className="mt-4"
+            />
+          )}
         </div>
         <div>
           <p className="text-base font-semibold">전체 진행률</p>
