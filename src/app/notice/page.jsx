@@ -131,7 +131,7 @@ export default function ProjectNoticesPage() {
     <div className="flex min-h-screen bg-white">
       <Sidebar />
 
-      <main className="min-w-0 flex-1 overflow-y-auto px-8 py-9">
+      <main className="ml-64 min-h-screen px-8 py-9">
         <section className="mx-auto w-full max-w-[1080px]">
           <header className="flex items-center gap-3">
             <Image src={teamIcon} alt="" width={38} height={38} />
