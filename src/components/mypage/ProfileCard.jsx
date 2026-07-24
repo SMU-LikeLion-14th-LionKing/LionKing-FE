@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { clearAuthTokens } from "@/lib/authStorage";
 
 const INITIAL_PROFILE = {
   name: "사용자",
@@ -50,7 +52,7 @@ function PasswordField({ label, value, onChange, placeholder }) {
   );
 }
 
-function PasswordChangeModal({ onClose, onConfirm }) {
+function PasswordChangeModal({ onClose, onConfirm, isSubmitting, submitError }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPasswordMismatch, setShowPasswordMismatch] = useState(false);
@@ -81,18 +83,23 @@ function PasswordChangeModal({ onClose, onConfirm }) {
           <PasswordField label="새 비밀번호" value={newPassword} onChange={handlePasswordChange(setNewPassword)} placeholder="새 비밀번호를 입력하세요." />
           <PasswordField label="새 비밀번호 확인" value={confirmPassword} onChange={handlePasswordChange(setConfirmPassword)} placeholder="새 비밀번호를 입력하세요." />
           {showPasswordMismatch && <p className="-mt-2 text-sm font-medium text-error">비밀번호가 일치하지 않습니다.</p>}
+          {submitError && <p className="-mt-2 text-sm font-medium text-error">{submitError}</p>}
         </div>
-        <button type="submit" disabled={!hasBothPasswords} className={`mt-7 h-13 w-full rounded-xl text-sm font-semibold ${hasBothPasswords ? "bg-primary text-white hover:bg-primary/90" : "cursor-not-allowed bg-[#e2e6eb] text-gray-3"}`}>비밀번호 변경</button>
+        <button type="submit" disabled={!hasBothPasswords || isSubmitting} className={`mt-7 h-13 w-full rounded-xl text-sm font-semibold ${hasBothPasswords && !isSubmitting ? "bg-primary text-white hover:bg-primary/90" : "cursor-not-allowed bg-[#e2e6eb] text-gray-3"}`}>{isSubmitting ? "변경 중..." : "비밀번호 변경"}</button>
       </form>
     </div>
   );
 }
 
 export default function ProfileCard() {
+  const router = useRouter();
   const [savedProfile, setSavedProfile] = useState(INITIAL_PROFILE);
   const [profile, setProfile] = useState(INITIAL_PROFILE);
   const [password, setPassword] = useState("");
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [modalPasswordError, setModalPasswordError] = useState("");
+  const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
   const [isSaveEnabled, setIsSaveEnabled] = useState(false);
   const [profileImage, setProfileImage] = useState("");
   const fileInputRef = useRef(null);
@@ -158,9 +165,70 @@ export default function ProfileCard() {
     event.target.value = "";
   };
 
+  const handlePasswordConfirm = async (newPassword) => {
+    setIsPasswordSubmitting(true);
+    setModalPasswordError("");
+
+    try {
+      const { data: result } = await api.patch("/api/users/me/password", {
+        current_password: password,
+        new_password: newPassword,
+      });
+
+      if (result?.isSuccess === false) {
+        setPasswordError(result?.message || "기존 비밀번호가 일치하지 않습니다.");
+        setIsPasswordModalOpen(false);
+        return;
+      }
+
+      setPassword("");
+      setPasswordError("");
+      setIsPasswordModalOpen(false);
+    } catch (error) {
+      const message =
+        error.response?.data?.message || error.message || "비밀번호 변경에 실패했습니다.";
+      const status = error.response?.status;
+
+      if (status === 400 || status === 401 || status === 403) {
+        setPasswordError(message || "기존 비밀번호가 일치하지 않습니다.");
+        setIsPasswordModalOpen(false);
+      } else {
+        setModalPasswordError(message);
+      }
+    } finally {
+      setIsPasswordSubmitting(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await api.post("/api/auth/logout");
+    } catch (error) {
+      console.error("로그아웃 요청 실패:", error);
+    } finally {
+      clearAuthTokens();
+      router.replace("/login");
+    }
+  };
+
   return (
     <section className="rounded-2xl border border-gray-5 bg-white px-7 py-8 sm:px-9 sm:py-9">
-      <h1 className="text-3xl font-bold tracking-[-0.04em] text-gray-1">마이페이지</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-[-0.04em] text-gray-1">마이페이지</h1>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-base font-bold text-[#969696]"
+        >
+          <Image
+            src="/icons/MyPage/logout.svg"
+            alt=""
+            width={19}
+            height={18}
+          />
+          로그아웃
+        </button>
+      </div>
 
       <div className="mt-7 flex flex-wrap items-center gap-7">
         <div className="relative flex h-29 w-29 items-center justify-center overflow-hidden rounded-full bg-primary text-4xl font-bold text-white">
@@ -183,9 +251,12 @@ export default function ProfileCard() {
         <TextField label="이름" value={profile.name} onChange={updateProfile("name")} />
         <TextField label="이메일" value={profile.email} onChange={updateProfile("email")} />
 
-        <PasswordField label="기존 비밀번호" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="기존 비밀번호를 입력하세요." />
+        <div>
+          <PasswordField label="기존 비밀번호" value={password} onChange={(event) => { setPassword(event.target.value); setPasswordError(""); }} placeholder="기존 비밀번호를 입력하세요." />
+          {passwordError && <p className="mt-2 text-sm font-medium text-error">{passwordError}</p>}
+        </div>
 
-        <button type="button" onClick={() => setIsPasswordModalOpen(true)} disabled={!password} className={`mt-6 h-13 rounded-xl text-base font-semibold ${password ? "bg-primary text-white" : "cursor-not-allowed bg-[#e2e6eb] text-gray-3"}`}>비밀번호 변경하기</button>
+        <button type="button" onClick={() => { setModalPasswordError(""); setIsPasswordModalOpen(true); }} disabled={!password} className={`mt-6 h-13 rounded-xl text-base font-semibold ${password ? "bg-primary text-white" : "cursor-not-allowed bg-[#e2e6eb] text-gray-3"}`}>비밀번호 변경하기</button>
 
         <div className="flex justify-end pt-5 md:col-span-2">
           <button
@@ -197,7 +268,7 @@ export default function ProfileCard() {
           </button>
         </div>
       </form>
-      {isPasswordModalOpen && <PasswordChangeModal onClose={() => setIsPasswordModalOpen(false)} onConfirm={() => { setPassword(""); setIsPasswordModalOpen(false); }} />}
+      {isPasswordModalOpen && <PasswordChangeModal onClose={() => setIsPasswordModalOpen(false)} onConfirm={handlePasswordConfirm} isSubmitting={isPasswordSubmitting} submitError={modalPasswordError} />}
     </section>
   );
 }
