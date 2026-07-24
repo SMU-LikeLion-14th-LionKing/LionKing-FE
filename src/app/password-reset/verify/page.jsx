@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
+import api from "@/lib/api";
 
 const CODE_LENGTH = 6;
 
@@ -10,6 +11,7 @@ export default function PasswordResetVerifyPage() {
   const router = useRouter();
   const [code, setCode] = useState(Array(CODE_LENGTH).fill(""));
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const inputRefs = useRef([]);
   const isComplete = code.every(Boolean);
 
@@ -54,17 +56,44 @@ export default function PasswordResetVerifyPage() {
     inputRefs.current[Math.min(pastedCode.length, CODE_LENGTH) - 1]?.focus();
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!isComplete) return;
+    if (!isComplete || isLoading) return;
 
-    if (code.join("") !== "111111") {
-      setError("인증코드가 일치하지 않습니다.");
+    const email = sessionStorage.getItem("password_reset_email");
+    if (!email) {
+      setError("이메일 인증을 다시 진행해주세요.");
       return;
     }
 
-    sessionStorage.setItem("password_reset_code", code.join(""));
-    router.push("/password-reset/new-password");
+    const verificationCode = code.join("");
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const { data: result } = await api.post(
+        "/api/auth/password/verify-code",
+        {
+          email,
+          code: verificationCode,
+        },
+      );
+      if (result?.isSuccess === false) {
+        throw new Error(result.message || "인증코드가 일치하지 않습니다.");
+      }
+
+      sessionStorage.setItem("password_reset_code", verificationCode);
+      router.push("/password-reset/new-password");
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          requestError.response?.data?.detail ||
+          requestError.message ||
+          "인증코드 검증 중 오류가 발생했습니다.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -111,10 +140,10 @@ export default function PasswordResetVerifyPage() {
           <Button
             type="submit"
             variant="primary"
-            disabled={!isComplete}
+            disabled={!isComplete || isLoading}
             className={`${error ? "mt-3" : "mt-7"} h-[42px] w-full rounded-lg text-sm`}
           >
-            본인 확인 완료
+            {isLoading ? "확인 중..." : "본인 확인 완료"}
           </Button>
         </form>
       </section>

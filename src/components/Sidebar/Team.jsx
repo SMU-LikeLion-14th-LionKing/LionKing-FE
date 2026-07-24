@@ -11,6 +11,7 @@ const TEAM_ICONS = [
   "/icons/Sidebar/burger.svg",
 ];
 
+
 function TeamItem({ team, onSelect }) {
   return (
     <div className="group border-b border-gray-5">
@@ -82,10 +83,7 @@ export default function Team() {
     }
     sessionStorage.setItem("selected_team_name", team.teamName);
     sessionStorage.setItem("selected_team_icon", team.icon);
-    sessionStorage.setItem(
-      "selected_project_title",
-      team.projectTitle || "",
-    );
+    sessionStorage.setItem("selected_project_title", team.projectTitle || "");
     window.dispatchEvent(new Event("team-selection-changed"));
   };
 

@@ -38,13 +38,6 @@
   --width-site: 1440px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 @layer components {
   .h1 {
     font-size: 36px;
