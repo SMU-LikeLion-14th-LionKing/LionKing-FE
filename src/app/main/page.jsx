@@ -321,11 +321,21 @@ function ProjectOverview({
   projectTitle,
   recentNotices,
 }) {
+  const progressRate = Math.min(
+    100,
+    Math.max(0, Number(summary?.progressRate) || 0),
+  );
+  const totalTaskCount = Number(summary?.totalTaskCount) || 0;
+  const completedTaskCount = Math.round(
+    (totalTaskCount * progressRate) / 100,
+  );
+  const displayTeamName = summary?.teamName || teamName;
+
   return (
     <>
       <header className="flex items-center gap-3 border-b border-gray-5 pb-5">
-        <Image src={teamIcon} alt={teamName} width={42} height={42} />
-        <h1 className="text-[30px] font-bold">{teamName}</h1>
+        <Image src={teamIcon} alt={displayTeamName} width={42} height={42} />
+        <h1 className="text-[30px] font-bold">{displayTeamName}</h1>
       </header>
 
       <section className="mt-5 grid min-h-[210px] grid-cols-[1.1fr_.9fr] items-center gap-12 rounded-[10px] border border-gray-5 px-12 py-8">
@@ -341,11 +351,16 @@ function ProjectOverview({
         </div>
         <div>
           <p className="text-base font-semibold">전체 진행률</p>
-          <strong className="mt-2 block text-[27px]">47%</strong>
+          <strong className="mt-2 block text-[27px]">{progressRate}%</strong>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-5">
-            <div className="h-full w-[47%] rounded-full bg-primary" />
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${progressRate}%` }}
+            />
           </div>
-          <p className="mt-3 text-xs text-gray-2">완료 12 / 전체20</p>
+          <p className="mt-3 text-xs text-gray-2">
+            완료 {completedTaskCount} / 전체 {totalTaskCount}
+          </p>
         </div>
       </section>
 
@@ -400,7 +415,7 @@ function ProjectOverview({
             </Link>
           </div>
           <ul className="divide-y divide-[#e5e8eb] leading-[1.45]">
-            {recentNotices.length > 0 ? (
+            {Array.isArray(recentNotices) && recentNotices.length > 0 ? (
               recentNotices.map((notice) => (
                 <li key={notice.postId} className="flex gap-2 py-3">
                   <span aria-hidden="true">·</span>
@@ -409,6 +424,11 @@ function ProjectOverview({
                   </span>
                 </li>
               ))
+            ) : typeof recentNotices === "string" &&
+              recentNotices.trim() ? (
+              <li className="whitespace-pre-line py-3">
+                {recentNotices}
+              </li>
             ) : (
               <li className="py-8 text-center text-gray-2">
                 등록된 공지사항이 없습니다.
@@ -998,7 +1018,10 @@ export default function Home() {
         if (isMounted && result?.isSuccess !== false) {
           setRecentNoticeState({
             projectId: String(projectId),
-            items: Array.isArray(result?.data) ? result.data : [],
+            items:
+              typeof result?.data === "string" || Array.isArray(result?.data)
+                ? result.data
+                : [],
           });
         }
       })
@@ -1038,11 +1061,19 @@ export default function Home() {
         <main className="min-w-0 flex-1 px-8 py-10">
           <div className="w-full">
             <ProjectOverview
-              summary={projectSummary}
+              summary={
+                String(projectSummary?.id) === String(projectId)
+                  ? projectSummary
+                  : null
+              }
               teamName={teamName}
               teamIcon={teamIcon}
               projectTitle={projectTitle}
-              recentNotices={recentNoticeState.items}
+              recentNotices={
+                recentNoticeState.projectId === String(projectId)
+                  ? recentNoticeState.items
+                  : []
+              }
             />
             <div className="mt-8 space-y-6">
               <BoardHeader
