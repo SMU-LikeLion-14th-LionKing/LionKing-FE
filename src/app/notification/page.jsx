@@ -157,7 +157,7 @@ export default function NotificationPage() {
   );
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="ml-64 flex min-h-screen bg-white">
       <Sidebar />
       <main className="min-w-0 flex-1 overflow-y-auto px-8 py-10 lg:px-12">
         <section className="mx-auto w-full max-w-[960px]">

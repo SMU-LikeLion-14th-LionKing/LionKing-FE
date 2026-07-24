@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-
-const INITIAL_PROFILE = {
-  name: "김멋사",
-  email: "likelion@gmail.com",
-};
+import {
+  DEFAULT_PROFILE,
+  getProfileSnapshot,
+  saveProfile,
+} from "@/lib/profileStorage";
 
 function TextField({ label, value, onChange }) {
   return (
@@ -88,18 +88,33 @@ function PasswordChangeModal({ onClose, onConfirm }) {
 }
 
 export default function ProfileCard() {
-  const [savedProfile, setSavedProfile] = useState(INITIAL_PROFILE);
-  const [profile, setProfile] = useState(INITIAL_PROFILE);
+  const [savedProfile, setSavedProfile] = useState(DEFAULT_PROFILE);
+  const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [password, setPassword] = useState("");
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isSaveEnabled, setIsSaveEnabled] = useState(false);
   const [profileImage, setProfileImage] = useState("");
+  const [savedProfileImage, setSavedProfileImage] = useState("");
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const storedProfile = JSON.parse(getProfileSnapshot());
+    // localStorage는 클라이언트 마운트 이후에 읽어 hydration 차이를 방지합니다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setProfile(storedProfile);
+    setSavedProfile(storedProfile);
+    setProfileImage(storedProfile.image || "");
+    setSavedProfileImage(storedProfile.image || "");
+  }, []);
 
   const updateProfile = (field) => (event) => {
     const nextProfile = { ...profile, [field]: event.target.value };
     setProfile(nextProfile);
-    setIsSaveEnabled(nextProfile.name !== savedProfile.name || nextProfile.email !== savedProfile.email);
+    setIsSaveEnabled(
+      nextProfile.name !== savedProfile.name ||
+        nextProfile.email !== savedProfile.email ||
+        profileImage !== savedProfileImage,
+    );
   };
 
   const handleSubmit = (event) => {
@@ -107,6 +122,8 @@ export default function ProfileCard() {
     if (!isSaveEnabled) return;
 
     setSavedProfile(profile);
+    setSavedProfileImage(profileImage);
+    saveProfile({ ...profile, image: profileImage });
     setIsSaveEnabled(false);
   };
 
@@ -115,7 +132,10 @@ export default function ProfileCard() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = () => setProfileImage(reader.result);
+    reader.onload = () => {
+      setProfileImage(reader.result);
+      setIsSaveEnabled(true);
+    };
     reader.readAsDataURL(file);
     event.target.value = "";
   };
@@ -125,7 +145,7 @@ export default function ProfileCard() {
       <h1 className="text-3xl font-bold tracking-[-0.04em] text-gray-1">마이페이지</h1>
 
       <div className="mt-7 flex flex-wrap items-center gap-7">
-        <div className="relative flex h-29 w-29 items-center justify-center overflow-hidden rounded-full bg-[#35bd9f] text-4xl font-bold text-white">
+        <div className="relative flex h-29 w-29 items-center justify-center overflow-hidden rounded-full bg-green text-4xl font-bold text-white">
           {profileImage ? (
             <Image src={profileImage} alt={`${profile.name} 프로필 사진`} fill unoptimized className="object-cover" />
           ) : profile.name.trim().charAt(0)}
