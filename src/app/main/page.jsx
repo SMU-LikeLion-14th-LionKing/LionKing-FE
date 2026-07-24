@@ -1043,7 +1043,7 @@ export default function Home() {
   }, [projectId]);
 
   const visiblePosts = useMemo(() => {
-    const combined = [...localPosts, ...(projectId ? projectPosts : posts)];
+    const combined = projectId ? projectPosts : [...localPosts, ...posts];
     return combined.filter((post) => {
       const matchesFilter =
         activeFilter === "전체" || post.type === activeFilter;
