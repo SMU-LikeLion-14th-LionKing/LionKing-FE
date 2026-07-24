@@ -1,13 +1,7 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/backend/:path*",
-        destination: "http://13.209.15.25:8080/:path*",
-      },
-    ];
+const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
   },
 };
 
-export default nextConfig;
+export default config;
