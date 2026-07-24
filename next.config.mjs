@@ -1,6 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: "/backend/:path*",
+        destination: "http://13.209.15.25:8080/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
