@@ -162,6 +162,13 @@ function normalizePostDetail(detail, summary) {
     imageUrl: imageAttachment
       ? resolveAttachmentUrl(imageAttachment.fileUrl)
       : null,
+    imageFileId:
+      imageAttachment?.fileId ??
+      imageAttachment?.file_id ??
+      imageAttachment?.attachmentId ??
+      imageAttachment?.attachment_id ??
+      imageAttachment?.id ??
+      null,
     imageAlt: `${detail.title || summary.title} 첨부 이미지`,
   };
 }
@@ -983,7 +990,35 @@ export default function Home() {
               if (detailResult?.isSuccess === false || !detailResult?.data) {
                 return normalizePost(post);
               }
-              return normalizePostDetail(detailResult.data, post);
+              const normalizedPost = normalizePostDetail(
+                detailResult.data,
+                post,
+              );
+
+              if (normalizedPost.imageFileId !== null) {
+                try {
+                  const { data: downloadResult } = await api.get(
+                    `/api/files/${normalizedPost.imageFileId}/download-url`,
+                  );
+                  const downloadUrl =
+                    typeof downloadResult?.data === "string"
+                      ? downloadResult.data
+                      : downloadResult?.data?.downloadUrl ||
+                        downloadResult?.data?.download_url ||
+                        downloadResult?.data?.url;
+
+                  if (downloadResult?.isSuccess !== false && downloadUrl) {
+                    return {
+                      ...normalizedPost,
+                      imageUrl: resolveAttachmentUrl(downloadUrl),
+                    };
+                  }
+                } catch {
+                  // 다운로드 URL 발급 실패 시 원본 첨부 URL을 사용합니다.
+                }
+              }
+
+              return normalizedPost;
             } catch {
               return normalizePost(post);
             }
