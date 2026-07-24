@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Sidebar from "@/components/Sidebar/Sidebar";
+import api from "@/lib/api";
 import AiSuggestion from "./AiSuggestion";
 import DateTimePicker, { formatDateTime } from "./DateTimePicker";
 import PostEditor, { RequiredMark, TextEditor } from "./PostEditor";
@@ -14,9 +15,29 @@ const postTypes = [
   { id: "note", title: "회의록", description: "회의 내용 정리", width: 51, height: 49 },
 ];
 
+const categoryIds = {
+  task: 1,
+  question: 2,
+  note: 3,
+};
+
+const subscribeToProjectSelection = (callback) => {
+  window.addEventListener("team-selection-changed", callback);
+  return () =>
+    window.removeEventListener("team-selection-changed", callback);
+};
+const getSelectedProjectId = () =>
+  sessionStorage.getItem("selected_project_id") || "";
+const getServerProjectId = () => "";
+
 export default function PostCreatePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const projectId = useSyncExternalStore(
+    subscribeToProjectSelection,
+    getSelectedProjectId,
+    getServerProjectId,
+  );
   const editId = searchParams.get("edit");
   const [restoredDraft] = useState(() => {
     if (searchParams.get("restore") !== "1" || typeof window === "undefined") return null;
@@ -37,15 +58,68 @@ export default function PostCreatePage() {
   });
   const [meetingDate, setMeetingDate] = useState(() => searchParams.get("meetingDate") || storedEdit?.meetingDate ? new Date(searchParams.get("meetingDate") ?? storedEdit.meetingDate) : null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const isValid = title.trim() && content.trim() && (type !== "note" || meetingDate);
-  const savePost = () => {
-    if (!isValid) return;
-    const storedPosts = JSON.parse(localStorage.getItem("lionking-posts") ?? "[]");
-    const coverImage = files.find((file) => typeof file === "object" && file.preview)?.preview ?? null;
-    const post = { id: editId ?? crypto.randomUUID(), type, title: title.trim(), content: content.trim(), files: files.map((file) => typeof file === "string" ? { name: file } : file), coverImage, vote: type === "question" ? vote : null, meetingDate: type === "note" ? meetingDate?.toISOString() : null, createdAt: storedEdit?.createdAt ?? new Date().toISOString() };
-    const nextPosts = editId ? storedPosts.map((item) => item.id === editId ? post : item) : [post, ...storedPosts];
-    localStorage.setItem("lionking-posts", JSON.stringify(nextPosts));
-    router.push("/main");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const isValid = Boolean(projectId && title.trim() && content.trim() && (type !== "note" || meetingDate));
+
+  const savePost = async () => {
+    if (!isValid || isSubmitting) return;
+
+    if (editId) {
+      setSubmitError("게시글 수정 API가 필요합니다.");
+      return;
+    }
+    if (files.length > 0) {
+      setSubmitError("첨부파일 업로드 API 연동이 필요합니다.");
+      return;
+    }
+    if (type === "question" && vote) {
+      setSubmitError("투표 생성 API 연동이 필요합니다.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
+      let response;
+
+      if (type === "note") {
+        response = await api.post(`/api/projects/${projectId}/meetings`, {
+          meetingTitle: title.trim(),
+          meetingDate: meetingDate.toISOString(),
+          rawContent: content.trim(),
+          attendeeUserIds: [],
+        });
+      } else {
+        response = await api.post(
+          `/api/projects/${projectId}/posts/${type}`,
+          {
+            categoryId: categoryIds[type],
+            title: title.trim(),
+            content: content.trim(),
+            attachments: [],
+          },
+        );
+      }
+
+      const result = response.data;
+      if (result?.isSuccess === false) {
+        throw new Error(result.message || "게시글 등록에 실패했습니다.");
+      }
+
+      sessionStorage.removeItem("lionking-post-draft");
+      router.push("/main");
+      router.refresh();
+    } catch (requestError) {
+      setSubmitError(
+        requestError.response?.data?.message ||
+          requestError.message ||
+          "게시글 등록에 실패했습니다.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   const openVoteEditor = () => {
     sessionStorage.setItem("lionking-post-draft", JSON.stringify({ type: "question", title, content, files, vote, editId }));
@@ -61,7 +135,7 @@ export default function PostCreatePage() {
           <section className="mt-12"><h2 className="mb-6 text-2xl font-semibold">3. 회의 날짜<RequiredMark /></h2><button type="button" onClick={() => setPickerOpen(true)} className="flex h-14 w-full cursor-pointer items-center justify-between rounded-lg border border-gray-5 px-5 text-left"><span className={meetingDate ? "text-black" : "text-[20px] font-medium text-gray-2"}>{formatDateTime(meetingDate)}</span><Image src="/icons/Posts/calendar.svg" alt="" width={30} height={30} /></button></section>
           <section className="mt-12"><h2 className="mb-6 text-2xl font-semibold">4. 회의 내용<RequiredMark /></h2><TextEditor value={content} onChange={setContent} />{content.trim() && <AiSuggestion type="note" onApply={setContent} />}</section>
         </>}
-      </form><div className="flex justify-end py-5"><button type="button" onClick={savePost} disabled={!isValid} className="cursor-pointer rounded-lg bg-primary px-7 py-4 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-3">{editId ? "수정 완료" : "게시글 등록하기"}</button></div></div></main>
+      </form><div className="flex items-center justify-end gap-4 py-5">{!projectId && <p role="alert" className="text-sm font-medium text-error">프로젝트를 먼저 선택해 주세요.</p>}{submitError && <p role="alert" className="text-sm font-medium text-error">{submitError}</p>}<button type="button" onClick={savePost} disabled={!isValid || isSubmitting} className="cursor-pointer rounded-lg bg-primary px-7 py-4 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-3">{isSubmitting ? "등록 중..." : editId ? "수정 완료" : "게시글 등록하기"}</button></div></div></main>
       {pickerOpen && <DateTimePicker value={meetingDate} label="회의일" onClose={() => setPickerOpen(false)} onConfirm={(date) => { setMeetingDate(date); setPickerOpen(false); }} />}
     </div>
   );

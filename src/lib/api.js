@@ -32,6 +32,7 @@ api.interceptors.response.use(
       "/api/auth/login",
       "/api/auth/signup",
       "/api/auth/me/password",
+      "/api/users/me/password",
     ].some((path) => request?.url?.includes(path));
     if (
       !isAuthFailure ||

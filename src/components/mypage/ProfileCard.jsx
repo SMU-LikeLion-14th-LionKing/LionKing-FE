@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import {
-  DEFAULT_PROFILE,
-  getProfileSnapshot,
-  saveProfile,
-} from "@/lib/profileStorage";
+import { useRouter } from "next/navigation";
+import api from "@/lib/api";
+import { clearAuthTokens } from "@/lib/authStorage";
+
+const INITIAL_PROFILE = {
+  name: "사용자",
+  email: "",
+};
 
 function TextField({ label, value, onChange }) {
   return (
@@ -49,7 +52,7 @@ function PasswordField({ label, value, onChange, placeholder }) {
   );
 }
 
-function PasswordChangeModal({ onClose, onConfirm }) {
+function PasswordChangeModal({ onClose, onConfirm, isSubmitting, submitError }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPasswordMismatch, setShowPasswordMismatch] = useState(false);
@@ -80,41 +83,68 @@ function PasswordChangeModal({ onClose, onConfirm }) {
           <PasswordField label="새 비밀번호" value={newPassword} onChange={handlePasswordChange(setNewPassword)} placeholder="새 비밀번호를 입력하세요." />
           <PasswordField label="새 비밀번호 확인" value={confirmPassword} onChange={handlePasswordChange(setConfirmPassword)} placeholder="새 비밀번호를 입력하세요." />
           {showPasswordMismatch && <p className="-mt-2 text-sm font-medium text-error">비밀번호가 일치하지 않습니다.</p>}
+          {submitError && <p className="-mt-2 text-sm font-medium text-error">{submitError}</p>}
         </div>
-        <button type="submit" disabled={!hasBothPasswords} className={`mt-7 h-13 w-full rounded-xl text-sm font-semibold ${hasBothPasswords ? "bg-primary text-white hover:bg-primary/90" : "cursor-not-allowed bg-[#e2e6eb] text-gray-3"}`}>비밀번호 변경</button>
+        <button type="submit" disabled={!hasBothPasswords || isSubmitting} className={`mt-7 h-13 w-full rounded-xl text-sm font-semibold ${hasBothPasswords && !isSubmitting ? "bg-primary text-white hover:bg-primary/90" : "cursor-not-allowed bg-[#e2e6eb] text-gray-3"}`}>{isSubmitting ? "변경 중..." : "비밀번호 변경"}</button>
       </form>
     </div>
   );
 }
 
 export default function ProfileCard() {
-  const [savedProfile, setSavedProfile] = useState(DEFAULT_PROFILE);
-  const [profile, setProfile] = useState(DEFAULT_PROFILE);
+  const router = useRouter();
+  const [savedProfile, setSavedProfile] = useState(INITIAL_PROFILE);
+  const [profile, setProfile] = useState(INITIAL_PROFILE);
   const [password, setPassword] = useState("");
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [modalPasswordError, setModalPasswordError] = useState("");
+  const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
   const [isSaveEnabled, setIsSaveEnabled] = useState(false);
   const [profileImage, setProfileImage] = useState("");
-  const [savedProfileImage, setSavedProfileImage] = useState("");
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    const storedProfile = JSON.parse(getProfileSnapshot());
-    // localStorage는 클라이언트 마운트 이후에 읽어 hydration 차이를 방지합니다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProfile(storedProfile);
-    setSavedProfile(storedProfile);
-    setProfileImage(storedProfile.image || "");
-    setSavedProfileImage(storedProfile.image || "");
+    const controller = new AbortController();
+
+    const fetchUser = async () => {
+      try {
+        const response = await api.get("/api/users/me", {
+          signal: controller.signal,
+        });
+        const result = response.data;
+
+        if (!result?.isSuccess || !result.data) {
+          throw new Error(result?.message || "사용자 정보를 불러오지 못했습니다.");
+        }
+
+        const userProfile = {
+          name: result.data.name || INITIAL_PROFILE.name,
+          email: result.data.email || INITIAL_PROFILE.email,
+        };
+
+        setSavedProfile(userProfile);
+        setProfile(userProfile);
+        setProfileImage(result.data.profile_image_url || "");
+        setIsSaveEnabled(false);
+      } catch (error) {
+        if (error.name !== "CanceledError") {
+          setSavedProfile(INITIAL_PROFILE);
+          setProfile(INITIAL_PROFILE);
+          setProfileImage("");
+        }
+      }
+    };
+
+    fetchUser();
+
+    return () => controller.abort();
   }, []);
 
   const updateProfile = (field) => (event) => {
     const nextProfile = { ...profile, [field]: event.target.value };
     setProfile(nextProfile);
-    setIsSaveEnabled(
-      nextProfile.name !== savedProfile.name ||
-        nextProfile.email !== savedProfile.email ||
-        profileImage !== savedProfileImage,
-    );
+    setIsSaveEnabled(nextProfile.name !== savedProfile.name || nextProfile.email !== savedProfile.email);
   };
 
   const handleSubmit = (event) => {
@@ -122,8 +152,6 @@ export default function ProfileCard() {
     if (!isSaveEnabled) return;
 
     setSavedProfile(profile);
-    setSavedProfileImage(profileImage);
-    saveProfile({ ...profile, image: profileImage });
     setIsSaveEnabled(false);
   };
 
@@ -132,22 +160,87 @@ export default function ProfileCard() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setProfileImage(reader.result);
-      setIsSaveEnabled(true);
-    };
+    reader.onload = () => setProfileImage(reader.result);
     reader.readAsDataURL(file);
     event.target.value = "";
   };
 
+  const handlePasswordConfirm = async (newPassword) => {
+    setIsPasswordSubmitting(true);
+    setModalPasswordError("");
+
+    try {
+      const { data: result } = await api.patch("/api/users/me/password", {
+        current_password: password,
+        new_password: newPassword,
+      });
+
+      if (result?.isSuccess === false) {
+        setPasswordError(result?.message || "기존 비밀번호가 일치하지 않습니다.");
+        setIsPasswordModalOpen(false);
+        return;
+      }
+
+      setPassword("");
+      setPasswordError("");
+      setIsPasswordModalOpen(false);
+    } catch (error) {
+      const message =
+        error.response?.data?.message || error.message || "비밀번호 변경에 실패했습니다.";
+      const status = error.response?.status;
+
+      if (status === 400 || status === 401 || status === 403) {
+        setPasswordError(message || "기존 비밀번호가 일치하지 않습니다.");
+        setIsPasswordModalOpen(false);
+      } else {
+        setModalPasswordError(message);
+      }
+    } finally {
+      setIsPasswordSubmitting(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await api.post("/api/auth/logout");
+    } catch (error) {
+      console.error("로그아웃 요청 실패:", error);
+    } finally {
+      clearAuthTokens();
+      router.replace("/login");
+    }
+  };
+
   return (
     <section className="rounded-2xl border border-gray-5 bg-white px-7 py-8 sm:px-9 sm:py-9">
-      <h1 className="text-3xl font-bold tracking-[-0.04em] text-gray-1">마이페이지</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-[-0.04em] text-gray-1">마이페이지</h1>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-base font-bold text-[#969696]"
+        >
+          <Image
+            src="/icons/MyPage/logout.svg"
+            alt=""
+            width={19}
+            height={18}
+          />
+          로그아웃
+        </button>
+      </div>
 
       <div className="mt-7 flex flex-wrap items-center gap-7">
-        <div className="relative flex h-29 w-29 items-center justify-center overflow-hidden rounded-full bg-green text-4xl font-bold text-white">
+        <div className="relative flex h-29 w-29 items-center justify-center overflow-hidden rounded-full bg-primary text-4xl font-bold text-white">
           {profileImage ? (
-            <Image src={profileImage} alt={`${profile.name} 프로필 사진`} fill unoptimized className="object-cover" />
+            // 외부 이미지 호스트가 정해지지 않아 일반 img로 표시합니다.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profileImage}
+              alt={`${profile.name} 프로필 사진`}
+              className="h-full w-full object-cover"
+              onError={() => setProfileImage("")}
+            />
           ) : profile.name.trim().charAt(0)}
         </div>
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleProfileImageChange} className="sr-only" />
@@ -158,9 +251,12 @@ export default function ProfileCard() {
         <TextField label="이름" value={profile.name} onChange={updateProfile("name")} />
         <TextField label="이메일" value={profile.email} onChange={updateProfile("email")} />
 
-        <PasswordField label="기존 비밀번호" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="기존 비밀번호를 입력하세요." />
+        <div>
+          <PasswordField label="기존 비밀번호" value={password} onChange={(event) => { setPassword(event.target.value); setPasswordError(""); }} placeholder="기존 비밀번호를 입력하세요." />
+          {passwordError && <p className="mt-2 text-sm font-medium text-error">{passwordError}</p>}
+        </div>
 
-        <button type="button" onClick={() => setIsPasswordModalOpen(true)} disabled={!password} className={`mt-6 h-13 rounded-xl text-base font-semibold ${password ? "bg-primary text-white" : "cursor-not-allowed bg-[#e2e6eb] text-gray-3"}`}>비밀번호 변경하기</button>
+        <button type="button" onClick={() => { setModalPasswordError(""); setIsPasswordModalOpen(true); }} disabled={!password} className={`mt-6 h-13 rounded-xl text-base font-semibold ${password ? "bg-primary text-white" : "cursor-not-allowed bg-[#e2e6eb] text-gray-3"}`}>비밀번호 변경하기</button>
 
         <div className="flex justify-end pt-5 md:col-span-2">
           <button
@@ -172,7 +268,7 @@ export default function ProfileCard() {
           </button>
         </div>
       </form>
-      {isPasswordModalOpen && <PasswordChangeModal onClose={() => setIsPasswordModalOpen(false)} onConfirm={() => { setPassword(""); setIsPasswordModalOpen(false); }} />}
+      {isPasswordModalOpen && <PasswordChangeModal onClose={() => setIsPasswordModalOpen(false)} onConfirm={handlePasswordConfirm} isSubmitting={isPasswordSubmitting} submitError={modalPasswordError} />}
     </section>
   );
 }

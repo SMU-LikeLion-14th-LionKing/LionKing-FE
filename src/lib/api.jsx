@@ -41,6 +41,7 @@ api.interceptors.response.use(
       "/api/auth/password/send-code",
       "/api/auth/password/verify-code",
       "/api/auth/me/password",
+      "/api/users/me/password",
     ].some((path) => originalRequest?.url?.includes(path));
 
     if (

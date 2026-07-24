@@ -2,27 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
 
-const DEFAULT_TEAMS = [
-  { teamName: "라이온킹", icon: "/icons/Sidebar/lion.svg" },
-  { teamName: "타이거킹", icon: "/icons/Sidebar/tiger.svg" },
-  { teamName: "버거킹", icon: "/icons/Sidebar/burger.svg" },
-];
 const TEAM_ICONS = [
   "/icons/Sidebar/lion.svg",
   "/icons/Sidebar/tiger.svg",
   "/icons/Sidebar/burger.svg",
 ];
-const DEFAULT_ICON_BY_TEAM_NAME = Object.fromEntries(
-  DEFAULT_TEAMS.map((team) => [team.teamName, team.icon]),
-);
-const subscribeToTeams = (callback) => {
-  window.addEventListener("team-selection-changed", callback);
-  return () => window.removeEventListener("team-selection-changed", callback);
-};
-const getTeamsSnapshot = () => sessionStorage.getItem("project_teams") || "[]";
-const getServerTeamsSnapshot = () => "[]";
+
 
 function TeamItem({ team, onSelect }) {
   return (
@@ -41,6 +29,7 @@ function TeamItem({ team, onSelect }) {
       <div className="max-h-0 overflow-hidden opacity-0 transition-all group-hover:max-h-10 group-hover:opacity-100 group-focus-within:max-h-10 group-focus-within:opacity-100">
         <Link
           href="/teammanagement"
+          onClick={() => onSelect(team)}
           className="block py-2 pl-12 text-sm text-gray-2 hover:bg-gray-4 hover:text-gray-1"
         >
           팀페이지
@@ -51,28 +40,43 @@ function TeamItem({ team, onSelect }) {
 }
 
 export default function Team() {
-  const storedTeamsSnapshot = useSyncExternalStore(
-    subscribeToTeams,
-    getTeamsSnapshot,
-    getServerTeamsSnapshot,
-  );
-  const teams = useMemo(() => {
-    const createdTeams = JSON.parse(storedTeamsSnapshot).map((team, index) => ({
-      ...team,
-      icon:
-        DEFAULT_ICON_BY_TEAM_NAME[team.teamName] ||
-        team.icon ||
-        TEAM_ICONS[index % TEAM_ICONS.length],
-    }));
-    const createdNames = new Set(createdTeams.map((team) => team.teamName));
-    return [
-      ...createdTeams,
-      ...DEFAULT_TEAMS.filter((team) => !createdNames.has(team.teamName)),
-    ];
-  }, [storedTeamsSnapshot]);
+  const [teams, setTeams] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProjects = async () => {
+      try {
+        const { data: result } = await api.get("/api/projects");
+        if (result?.isSuccess === false || !Array.isArray(result?.data)) {
+          throw new Error(result?.message || "프로젝트 목록을 불러오지 못했습니다.");
+        }
+
+        if (isMounted) {
+          setTeams(
+            result.data.map((project, index) => ({
+              projectId: project.id,
+              teamName: project.name,
+              projectTitle: project.title,
+              icon: TEAM_ICONS[index % TEAM_ICONS.length],
+            })),
+          );
+        }
+      } catch (error) {
+        console.error("프로젝트 목록 조회 실패:", error);
+        if (isMounted) setTeams([]);
+      }
+    };
+
+    fetchProjects();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const selectTeam = (team) => {
-    if (team.projectId) {
+    if (team.projectId !== undefined && team.projectId !== null) {
       sessionStorage.setItem("selected_project_id", String(team.projectId));
     } else {
       sessionStorage.removeItem("selected_project_id");
