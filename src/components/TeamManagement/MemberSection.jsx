@@ -1,20 +1,89 @@
 "use client";
 
-import { memberList } from "@/constants/teammanagement";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import api from "@/lib/api";
 import MemberCard from "./MemberCard";
 
+const MEMBER_COLORS = [
+  "bg-[#35bea1]",
+  "bg-[#f2697b]",
+  "bg-[#9574dd]",
+  "bg-[#4788db]",
+];
+const LEADER_PERMISSIONS = new Set(["OWNER", "LEADER", "팀장"]);
+const subscribeToProject = (callback) => {
+  window.addEventListener("team-selection-changed", callback);
+  return () => window.removeEventListener("team-selection-changed", callback);
+};
+const getProjectSnapshot = () =>
+  sessionStorage.getItem("selected_project_id") || "";
+const getServerProjectSnapshot = () => "";
+
 export default function MemberSection() {
-  const [members, setMembers] = useState(memberList);
-  const [draftMembers, setDraftMembers] = useState(memberList);
+  const projectId = useSyncExternalStore(
+    subscribeToProject,
+    getProjectSnapshot,
+    getServerProjectSnapshot,
+  );
+  const [members, setMembers] = useState([]);
+  const [draftMembers, setDraftMembers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [leaderEmail, setLeaderEmail] = useState(null);
-  const [draftLeaderEmail, setDraftLeaderEmail] = useState(memberList[0]?.email ?? null);
+  const [draftLeaderEmail, setDraftLeaderEmail] = useState(null);
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    const controller = new AbortController();
+
+    const fetchMembers = async () => {
+      try {
+        const { data: result } = await api.get(
+          `/api/projects/${projectId}/members`,
+          { signal: controller.signal },
+        );
+
+        if (result?.isSuccess === false || !Array.isArray(result?.data)) {
+          throw new Error(result?.message || "팀원 목록을 불러오지 못했습니다.");
+        }
+
+        const nextMembers = result.data.map((member, index) => ({
+          id: member.user_id,
+          name: member.name,
+          email: member.email,
+          permission: member.permission,
+          role: member.role_description || "",
+          initial: member.name?.trim().charAt(0) || "?",
+          color: MEMBER_COLORS[index % MEMBER_COLORS.length],
+        }));
+        const leader =
+          nextMembers.find((member) =>
+            LEADER_PERMISSIONS.has(member.permission?.toUpperCase()),
+          ) || null;
+
+        setMembers(nextMembers);
+        setDraftMembers(nextMembers);
+        setLeaderEmail(leader?.email || null);
+        setDraftLeaderEmail(leader?.email || null);
+      } catch (error) {
+        if (error.name !== "CanceledError") {
+          console.error("팀원 목록 조회 실패:", error);
+          setMembers([]);
+          setDraftMembers([]);
+          setLeaderEmail(null);
+          setDraftLeaderEmail(null);
+        }
+      }
+    };
+
+    fetchMembers();
+    return () => controller.abort();
+  }, [projectId]);
 
   const openModal = () => {
     setDraftMembers(members.map((member) => ({ ...member })));
-    setDraftLeaderEmail(leaderEmail ?? memberList[0]?.email ?? null);
+    setDraftLeaderEmail(leaderEmail ?? members[0]?.email ?? null);
     setIsModalOpen(true);
   };
 

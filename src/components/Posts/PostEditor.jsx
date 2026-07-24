@@ -44,12 +44,13 @@ export function FileUpload({ files, onChange }) {
     const nextFiles = await Promise.all(Array.from(fileList).map((file) => new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = () => resolve({
+        file,
         name: file.name,
         type: file.type,
         fileUrl: reader.result,
         preview: file.type.startsWith("image/") ? reader.result : null,
       });
-      reader.onerror = () => resolve({ name: file.name, type: file.type, fileUrl: null, preview: null });
+      reader.onerror = () => resolve({ file, name: file.name, type: file.type, fileUrl: null, preview: null });
       reader.readAsDataURL(file);
     })));
     onChange([...files, ...nextFiles].slice(0, 5));

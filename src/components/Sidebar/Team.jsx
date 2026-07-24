@@ -56,8 +56,8 @@ export default function Team() {
           setTeams(
             result.data.map((project, index) => ({
               projectId: project.id,
-              teamName: project.name,
-              projectTitle: project.title,
+              teamName: project.teamName?.trim() || "이름 없는 팀",
+              projectTitle: "",
               icon: TEAM_ICONS[index % TEAM_ICONS.length],
             })),
           );
