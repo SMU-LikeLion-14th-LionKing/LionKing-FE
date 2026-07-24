@@ -323,14 +323,19 @@ function ProjectOverview({
   teamIcon,
   projectTitle,
   recentNotices,
+  aiProgress,
+  totalPostCount,
 }) {
   const progressRate = Math.min(
     100,
-    Math.max(0, Number(summary?.progressRate) || 0),
+    Math.max(
+      0,
+      Number(aiProgress?.currentProgressRate ?? summary?.progressRate) || 0,
+    ),
   );
-  const totalTaskCount = Number(summary?.totalTaskCount) || 0;
-  const completedTaskCount = Math.round(
-    (totalTaskCount * progressRate) / 100,
+  const normalizedTotalPostCount = Number(totalPostCount) || 0;
+  const completedPostCount = Math.round(
+    (normalizedTotalPostCount * progressRate) / 100,
   );
   const displayTeamName = summary?.teamName || teamName;
 
@@ -362,7 +367,7 @@ function ProjectOverview({
             />
           </div>
           <p className="mt-3 text-xs text-gray-2">
-            완료 {completedTaskCount} / 전체 {totalTaskCount}
+            완료 {completedPostCount} / 전체 {normalizedTotalPostCount}
           </p>
         </div>
       </section>
@@ -726,7 +731,7 @@ function ReactionModal({ postId, onClose, onSelect }) {
   );
 }
 
-function PostCard({ post }) {
+function PostCard({ post, onReactionSaved }) {
   const [isReactionModalOpen, setIsReactionModalOpen] = useState(false);
   const [selectedReaction, setSelectedReaction] = useState(null);
   const [reactionCounts, setReactionCounts] = useState({
@@ -747,6 +752,7 @@ function PostCard({ post }) {
     });
     setSelectedReaction(reaction);
     setIsReactionModalOpen(false);
+    if (onReactionSaved) onReactionSaved(reaction);
   };
 
   return (
@@ -902,6 +908,14 @@ export default function Home() {
     projectId: "",
     items: [],
   });
+  const [aiProgressState, setAiProgressState] = useState({
+    projectId: "",
+    data: null,
+  });
+  const [postCountState, setPostCountState] = useState({
+    projectId: "",
+    count: 0,
+  });
   const projectId = useSyncExternalStore(
     subscribeToProjectSelection,
     getSelectedProjectId,
@@ -956,7 +970,10 @@ export default function Home() {
           throw new Error(result.message || "게시글 조회에 실패했습니다.");
         }
         const content = Array.isArray(result?.data?.content)
-          ? result.data.content
+          ? result.data.content.filter((post) => {
+              const categoryName = post.categoryName?.toLowerCase();
+              return categoryName !== "공지사항" && categoryName !== "notice";
+            })
           : [];
         const detailedPosts = await Promise.all(
           content.map(async (post) => {
@@ -975,10 +992,18 @@ export default function Home() {
         if (isMounted) {
           setPostsError("");
           setProjectPosts(detailedPosts);
+          setPostCountState({
+            projectId: String(projectId),
+            count: detailedPosts.length,
+          });
         }
       })
       .catch((requestError) => {
         if (isMounted) {
+          setPostCountState({
+            projectId: String(projectId),
+            count: 0,
+          });
           setPostsError(
             requestError.response?.data?.message ||
               requestError.message ||
@@ -1037,6 +1062,26 @@ export default function Home() {
         }
       });
 
+    api
+      .get(`/api/projects/${projectId}/ai-progress`)
+      .then((response) => {
+        const result = response.data;
+        if (isMounted && result?.isSuccess !== false) {
+          setAiProgressState({
+            projectId: String(projectId),
+            data: result?.data ?? null,
+          });
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setAiProgressState({
+            projectId: String(projectId),
+            data: null,
+          });
+        }
+      });
+
     return () => {
       isMounted = false;
     };
@@ -1054,6 +1099,35 @@ export default function Home() {
       return matchesFilter && matchesSearch;
     });
   }, [localPosts, projectId, projectPosts, activeFilter, searchQuery]);
+
+  const refreshSummaryAfterReaction = async () => {
+    if (!projectId) return;
+
+    try {
+      const { data: result } = await api.get(
+        `/api/projects/${projectId}/summary`,
+      );
+      if (result?.isSuccess !== false && result?.data) {
+        setProjectSummary(result.data);
+      }
+    } catch {
+      // 반응은 정상 저장되었으므로 기존 진행률을 유지하고 다음 조회에서 갱신합니다.
+    }
+
+    try {
+      const { data: result } = await api.get(
+        `/api/projects/${projectId}/ai-progress`,
+      );
+      if (result?.isSuccess !== false) {
+        setAiProgressState({
+          projectId: String(projectId),
+          data: result?.data ?? null,
+        });
+      }
+    } catch {
+      // AI 진행률 재조회 실패 시 기존 값을 유지합니다.
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -1076,6 +1150,16 @@ export default function Home() {
                 recentNoticeState.projectId === String(projectId)
                   ? recentNoticeState.items
                   : []
+              }
+              aiProgress={
+                aiProgressState.projectId === String(projectId)
+                  ? aiProgressState.data
+                  : null
+              }
+              totalPostCount={
+                postCountState.projectId === String(projectId)
+                  ? postCountState.count
+                  : 0
               }
             />
             <div className="mt-8 space-y-6">
@@ -1103,6 +1187,7 @@ export default function Home() {
                   <PostCard
                     key={post.id || post.detailId || `post-${index}`}
                     post={post}
+                    onReactionSaved={refreshSummaryAfterReaction}
                   />
                 ))}
               </div>
