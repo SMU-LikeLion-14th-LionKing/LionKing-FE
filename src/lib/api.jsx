@@ -36,12 +36,20 @@ api.interceptors.response.use(
     const isReissueRequest = originalRequest?.url?.includes(
       "/api/auth/reissue",
     );
+    const isPublicAuthRequest = [
+      "/api/auth/login",
+      "/api/auth/signup",
+      "/api/auth/password/send-code",
+      "/api/auth/password/verify-code",
+      "/api/auth/me/password",
+    ].some((path) => originalRequest?.url?.includes(path));
 
     if (
       !isUnauthorized ||
       !originalRequest ||
       originalRequest._retry ||
-      isReissueRequest
+      isReissueRequest ||
+      isPublicAuthRequest
     ) {
       return Promise.reject(error);
     }
