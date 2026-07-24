@@ -11,7 +11,6 @@ const TEAM_ICONS = [
   "/icons/Sidebar/burger.svg",
 ];
 
-
 function TeamItem({ team, onSelect }) {
   return (
     <div className="group border-b border-gray-5">
@@ -49,14 +48,16 @@ export default function Team() {
       try {
         const { data: result } = await api.get("/api/projects");
         if (result?.isSuccess === false || !Array.isArray(result?.data)) {
-          throw new Error(result?.message || "프로젝트 목록을 불러오지 못했습니다.");
+          throw new Error(
+            result?.message || "프로젝트 목록을 불러오지 못했습니다.",
+          );
         }
 
         if (isMounted) {
           setTeams(
             result.data.map((project, index) => ({
               projectId: project.id,
-              teamName: project.teamName?.trim() || "이름 없는 팀",
+              teamName: project.teamName,
               projectTitle: "",
               icon: TEAM_ICONS[index % TEAM_ICONS.length],
             })),

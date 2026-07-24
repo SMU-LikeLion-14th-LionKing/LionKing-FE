@@ -7,11 +7,6 @@ import Sidebar from "@/components/Sidebar/Sidebar";
 import DeadlineBadge from "@/components/common/DeadlineBadge";
 import api from "@/lib/api";
 import { parseApiDate } from "@/lib/date";
-import {
-  DEFAULT_PROFILE_JSON,
-  getProfileSnapshot,
-  subscribeToProfile,
-} from "@/lib/profileStorage";
 
 const svgIcons = {
   search: "/icons/main/search.svg",
@@ -24,72 +19,6 @@ const svgIcons = {
   crown: "/icons/main/crown.svg",
   comment: "/icons/main/comment.svg",
 };
-
-const posts = [
-  {
-    isExample: true,
-    type: "작업",
-    typeClass: "border-primary text-gray-1",
-    author: "김멋사",
-    initial: "김",
-    avatar: "bg-[#37bea1]",
-    time: "1시간 전",
-    title: "발표 PPT 1차 제작 완료",
-    description: [
-      "1~6페이지 제작",
-      "문제점 파트까지 작성",
-      "해결방안 파트는 미작성 (17일까지 완료 예정)",
-      "디자인 통일성 관련 피드백 부탁드립니다.",
-    ],
-    comments: 2,
-    content: "image",
-    imageUrl: "/images/work.png",
-    imageAlt: "JOBto-DO 발표 자료 미리보기",
-  },
-  {
-    isExample: true,
-    type: "질문",
-    typeClass: "border-orange text-gray-1",
-    author: "이땡땡",
-    initial: "이",
-    avatar: "bg-[#f36f83]",
-    time: "2시간 전",
-    title: "어떤 디자인이 더 좋을까요?",
-    description: [
-      "게시글 화면에 보이는 카드 디자인입니다.",
-      "어떤 디자인이 더 직관적이고 깔끔해보이나요?",
-      "첫 번째는 이미지 크게, 두 번째는 내용 위주로",
-      "구성했습니다. 내일 18:00까지 의견 부탁드립니다!",
-    ],
-    comments: 7,
-    content: "poll",
-    pollImages: [
-      {
-        id: 1,
-        imageUrl: "/images/placeholder.png",
-        imageAlt: "후보 1 이미지",
-      },
-      {
-        id: 2,
-        imageUrl: "/images/placeholder.png",
-        imageAlt: "후보 2 이미지",
-      },
-    ],
-  },
-  {
-    isExample: true,
-    type: "회의록",
-    typeClass: "border-green text-gray-1",
-    author: "김네모",
-    initial: "김",
-    avatar: "bg-[#9a7be4]",
-    time: "어제",
-    title: "7/6 서비스명 회의",
-    description: ["2차 회의 내용을 요약 정리합니다."],
-    comments: 1,
-    content: "meeting",
-  },
-];
 
 const CATEGORY_CLASS = {
   작업: "border-primary text-gray-1",
@@ -162,42 +91,14 @@ function normalizePostDetail(detail, summary) {
     imageUrl: imageAttachment
       ? resolveAttachmentUrl(imageAttachment.fileUrl)
       : null,
+    imageFileId:
+      imageAttachment?.fileId ??
+      imageAttachment?.file_id ??
+      imageAttachment?.attachmentId ??
+      imageAttachment?.attachment_id ??
+      imageAttachment?.id ??
+      null,
     imageAlt: `${detail.title || summary.title} 첨부 이미지`,
-  };
-}
-
-function normalizeLocalPost(post, profile) {
-  const typeLabels = {
-    task: "작업",
-    question: "질문",
-    note: "회의록",
-  };
-  const type = typeLabels[post.type] || post.type || "게시글";
-  return {
-    id: `local-${post.id}`,
-    detailId: post.id,
-    type,
-    typeClass:
-      post.type === "task"
-        ? "border-primary text-gray-1"
-        : post.type === "question"
-          ? "border-orange text-gray-1"
-          : post.type === "note"
-            ? "border-green text-gray-1"
-            : "border-gray-3 text-gray-1",
-    author: profile.name,
-    initial: profile.name.trim().charAt(0),
-    profileImage: profile.image || "",
-    avatar: "bg-green",
-    time: formatRelativeTime(post.createdAt),
-    title: post.title,
-    description: post.content ? post.content.split(/\r?\n/) : [],
-    comments: 0,
-    reactionCount: 0,
-    content: post.vote ? "poll" : post.coverImage ? "image" : null,
-    imageUrl: post.coverImage || null,
-    imageAlt: `${post.title} 첨부 이미지`,
-    pollVote: post.vote || null,
   };
 }
 
@@ -208,17 +109,15 @@ const subscribeToProjectSelection = (callback) => {
 const getSelectedProjectId = () =>
   sessionStorage.getItem("selected_project_id") || "";
 const getSelectedTeamName = () =>
-  sessionStorage.getItem("selected_team_name") || "라이온킹";
+  sessionStorage.getItem("selected_team_name") || "";
 const getSelectedTeamIcon = () =>
   sessionStorage.getItem("selected_team_icon") || "/icons/Sidebar/lion.svg";
 const getSelectedProjectTitle = () =>
-  sessionStorage.getItem("selected_project_title") ||
-  "AI로 팀원 간의 소통 오류를 없앨 수 있다면?";
+  sessionStorage.getItem("selected_project_title") || "";
 const getServerProjectId = () => "";
-const getServerTeamName = () => "라이온킹";
+const getServerTeamName = () => "";
 const getServerTeamIcon = () => "/icons/Sidebar/lion.svg";
-const getServerProjectTitle = () =>
-  "AI로 팀원 간의 소통 오류를 없앨 수 있다면?";
+const getServerProjectTitle = () => "";
 
 function SvgSlot({ name, className = "" }) {
   return (
@@ -295,7 +194,7 @@ function BoardHeader({
 }
 
 function formatDeadline(value) {
-  if (!value) return "2026.07.24";
+  if (!value) return "";
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "2-digit",
@@ -307,7 +206,7 @@ function formatDeadline(value) {
 }
 
 function getDDay(value) {
-  if (!value) return "D-17";
+  if (!value) return "";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const deadline = new Date(value);
@@ -323,12 +222,29 @@ function ProjectOverview({
   teamIcon,
   projectTitle,
   recentNotices,
+  aiProgress,
+  totalPostCount,
+  aiPriorities,
+  aiIssues,
 }) {
+  const progressRate = Math.min(
+    100,
+    Math.max(
+      0,
+      Number(aiProgress?.currentProgressRate ?? summary?.progressRate) || 0,
+    ),
+  );
+  const normalizedTotalPostCount = Number(totalPostCount) || 0;
+  const completedPostCount = Math.round(
+    (normalizedTotalPostCount * progressRate) / 100,
+  );
+  const displayTeamName = summary?.teamName || teamName;
+
   return (
     <>
       <header className="flex items-center gap-3 border-b border-gray-5 pb-5">
-        <Image src={teamIcon} alt={teamName} width={42} height={42} />
-        <h1 className="text-[30px] font-bold">{teamName}</h1>
+        <Image src={teamIcon} alt={displayTeamName} width={42} height={42} />
+        <h1 className="text-[30px] font-bold">{displayTeamName}</h1>
       </header>
 
       <section className="mt-5 grid min-h-[210px] grid-cols-[1.1fr_.9fr] items-center gap-12 rounded-[10px] border border-gray-5 px-12 py-8">
@@ -336,19 +252,26 @@ function ProjectOverview({
           <h2 className="text-[23px] font-bold tracking-[-.4px]">
             {summary?.title || projectTitle}
           </h2>
-          <DeadlineBadge
-            date={formatDeadline(summary?.deadline)}
-            dDay={getDDay(summary?.deadline)}
-            className="mt-4"
-          />
+          {summary?.deadline && (
+            <DeadlineBadge
+              date={formatDeadline(summary.deadline)}
+              dDay={getDDay(summary.deadline)}
+              className="mt-4"
+            />
+          )}
         </div>
         <div>
           <p className="text-base font-semibold">전체 진행률</p>
-          <strong className="mt-2 block text-[27px]">47%</strong>
+          <strong className="mt-2 block text-[27px]">{progressRate}%</strong>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-5">
-            <div className="h-full w-[47%] rounded-full bg-primary" />
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${progressRate}%` }}
+            />
           </div>
-          <p className="mt-3 text-xs text-gray-2">완료 12 / 전체20</p>
+          <p className="mt-3 text-xs text-gray-2">
+            완료 {completedPostCount} / 전체 {normalizedTotalPostCount}
+          </p>
         </div>
       </section>
 
@@ -372,16 +295,41 @@ function ProjectOverview({
           </div>
           <div className="mt-4 leading-[1.55]">
             <p className="font-semibold">이번 주 우선순위</p>
-            <p>
-              · 와이어프레임 완성
-              <br />· 백엔드 API 문서 확인
-            </p>
+            {typeof aiPriorities === "string" && aiPriorities.trim() ? (
+              <p className="whitespace-pre-line">{aiPriorities}</p>
+            ) : Array.isArray(aiPriorities) && aiPriorities.length > 0 ? (
+              <ul>
+                {aiPriorities.map((priority, index) => (
+                  <li key={priority.id ?? priority.priorityId ?? index}>
+                    · {priority.title ?? priority.content ?? String(priority)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-2">등록된 우선순위가 없습니다.</p>
+            )}
             <div className="my-3 border-t border-[#e5e8eb]" />
             <p className="font-semibold">최근 소통 이슈</p>
-            <p>
-              · 디자인 관련 질문 게시물이 3건 등록되었습니다.
-              <br />· 발표 자료 피드백 요청이 아직 확인되지 않았습니다.
-            </p>
+            {Array.isArray(aiIssues) && aiIssues.length > 0 ? (
+              <ul>
+                {aiIssues.map((issue, index) => (
+                  <li key={issue.id ?? issue.issueId ?? index}>
+                    ·{" "}
+                    {typeof issue === "string"
+                      ? issue
+                      : issue.title ??
+                        issue.content ??
+                        issue.message ??
+                        issue.summary ??
+                        "내용을 확인해주세요."}
+                  </li>
+                ))}
+              </ul>
+            ) : typeof aiIssues === "string" && aiIssues.trim() ? (
+              <p className="whitespace-pre-line">{aiIssues}</p>
+            ) : (
+              <p className="text-gray-2">발견된 소통 이슈가 없습니다.</p>
+            )}
           </div>
         </section>
 
@@ -403,7 +351,7 @@ function ProjectOverview({
             </Link>
           </div>
           <ul className="divide-y divide-[#e5e8eb] leading-[1.45]">
-            {recentNotices.length > 0 ? (
+            {Array.isArray(recentNotices) && recentNotices.length > 0 ? (
               recentNotices.map((notice) => (
                 <li key={notice.postId} className="flex gap-2 py-3">
                   <span aria-hidden="true">·</span>
@@ -412,6 +360,11 @@ function ProjectOverview({
                   </span>
                 </li>
               ))
+            ) : typeof recentNotices === "string" &&
+              recentNotices.trim() ? (
+              <li className="whitespace-pre-line py-3">
+                {recentNotices}
+              </li>
             ) : (
               <li className="py-8 text-center text-gray-2">
                 등록된 공지사항이 없습니다.
@@ -706,7 +659,7 @@ function ReactionModal({ postId, onClose, onSelect }) {
   );
 }
 
-function PostCard({ post }) {
+function PostCard({ post, onReactionSaved }) {
   const [isReactionModalOpen, setIsReactionModalOpen] = useState(false);
   const [selectedReaction, setSelectedReaction] = useState(null);
   const [reactionCounts, setReactionCounts] = useState({
@@ -727,6 +680,7 @@ function PostCard({ post }) {
     });
     setSelectedReaction(reaction);
     setIsReactionModalOpen(false);
+    if (onReactionSaved) onReactionSaved(reaction);
   };
 
   return (
@@ -867,43 +821,35 @@ function PostCard({ post }) {
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState("전체");
   const [searchQuery, setSearchQuery] = useState("");
-  const [localPosts, setLocalPosts] = useState([]);
   const [projectPosts, setProjectPosts] = useState([]);
   const [isPostsLoading, setIsPostsLoading] = useState(true);
   const [postsError, setPostsError] = useState("");
-  const profileSnapshot = useSyncExternalStore(
-    subscribeToProfile,
-    getProfileSnapshot,
-    () => DEFAULT_PROFILE_JSON,
-  );
-  const profile = useMemo(() => JSON.parse(profileSnapshot), [profileSnapshot]);
   const [projectSummary, setProjectSummary] = useState(null);
   const [recentNoticeState, setRecentNoticeState] = useState({
     projectId: "",
     items: [],
+  });
+  const [aiProgressState, setAiProgressState] = useState({
+    projectId: "",
+    data: null,
+  });
+  const [postCountState, setPostCountState] = useState({
+    projectId: "",
+    count: 0,
+  });
+  const [aiPrioritiesState, setAiPrioritiesState] = useState({
+    projectId: "",
+    data: null,
+  });
+  const [aiIssuesState, setAiIssuesState] = useState({
+    projectId: "",
+    data: [],
   });
   const projectId = useSyncExternalStore(
     subscribeToProjectSelection,
     getSelectedProjectId,
     getServerProjectId,
   );
-
-  useEffect(() => {
-    try {
-      const storedPosts = JSON.parse(
-        localStorage.getItem("lionking-posts") ?? "[]",
-      );
-      // localStorage는 클라이언트 마운트 이후에만 읽어 hydration 차이를 방지합니다.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLocalPosts(
-        Array.isArray(storedPosts)
-          ? storedPosts.map((post) => normalizeLocalPost(post, profile))
-          : [],
-      );
-    } catch {
-      setLocalPosts([]);
-    }
-  }, [profile]);
 
   const teamName = useSyncExternalStore(
     subscribeToProjectSelection,
@@ -936,7 +882,10 @@ export default function Home() {
           throw new Error(result.message || "게시글 조회에 실패했습니다.");
         }
         const content = Array.isArray(result?.data?.content)
-          ? result.data.content
+          ? result.data.content.filter((post) => {
+              const categoryName = post.categoryName?.toLowerCase();
+              return categoryName !== "공지사항" && categoryName !== "notice";
+            })
           : [];
         const detailedPosts = await Promise.all(
           content.map(async (post) => {
@@ -946,7 +895,35 @@ export default function Home() {
               if (detailResult?.isSuccess === false || !detailResult?.data) {
                 return normalizePost(post);
               }
-              return normalizePostDetail(detailResult.data, post);
+              const normalizedPost = normalizePostDetail(
+                detailResult.data,
+                post,
+              );
+
+              if (normalizedPost.imageFileId !== null) {
+                try {
+                  const { data: downloadResult } = await api.get(
+                    `/api/files/${normalizedPost.imageFileId}/download-url`,
+                  );
+                  const downloadUrl =
+                    typeof downloadResult?.data === "string"
+                      ? downloadResult.data
+                      : downloadResult?.data?.downloadUrl ||
+                        downloadResult?.data?.download_url ||
+                        downloadResult?.data?.url;
+
+                  if (downloadResult?.isSuccess !== false && downloadUrl) {
+                    return {
+                      ...normalizedPost,
+                      imageUrl: resolveAttachmentUrl(downloadUrl),
+                    };
+                  }
+                } catch {
+                  // 다운로드 URL 발급 실패 시 원본 첨부 URL을 사용합니다.
+                }
+              }
+
+              return normalizedPost;
             } catch {
               return normalizePost(post);
             }
@@ -955,10 +932,18 @@ export default function Home() {
         if (isMounted) {
           setPostsError("");
           setProjectPosts(detailedPosts);
+          setPostCountState({
+            projectId: String(projectId),
+            count: detailedPosts.length,
+          });
         }
       })
       .catch((requestError) => {
         if (isMounted) {
+          setPostCountState({
+            projectId: String(projectId),
+            count: 0,
+          });
           setPostsError(
             requestError.response?.data?.message ||
               requestError.message ||
@@ -1001,7 +986,10 @@ export default function Home() {
         if (isMounted && result?.isSuccess !== false) {
           setRecentNoticeState({
             projectId: String(projectId),
-            items: Array.isArray(result?.data) ? result.data : [],
+            items:
+              typeof result?.data === "string" || Array.isArray(result?.data)
+                ? result.data
+                : [],
           });
         }
       })
@@ -1014,14 +1002,78 @@ export default function Home() {
         }
       });
 
+    api
+      .get(`/api/projects/${projectId}/ai-progress`)
+      .then((response) => {
+        const result = response.data;
+        if (isMounted && result?.isSuccess !== false) {
+          setAiProgressState({
+            projectId: String(projectId),
+            data: result?.data ?? null,
+          });
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setAiProgressState({
+            projectId: String(projectId),
+            data: null,
+          });
+        }
+      });
+
+    api
+      .get(`/api/projects/${projectId}/ai-priorities`)
+      .then((response) => {
+        const result = response.data;
+        if (isMounted && result?.isSuccess !== false) {
+          setAiPrioritiesState({
+            projectId: String(projectId),
+            data: result?.data ?? null,
+          });
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setAiPrioritiesState({
+            projectId: String(projectId),
+            data: null,
+          });
+        }
+      });
+
+    api
+      .get(`/api/projects/${projectId}/ai-issues`)
+      .then((response) => {
+        const result = response.data;
+        if (isMounted && result?.isSuccess !== false) {
+          const issueData = result?.data;
+          setAiIssuesState({
+            projectId: String(projectId),
+            data: Array.isArray(issueData?.issues)
+              ? issueData.issues
+              : typeof issueData === "string" || Array.isArray(issueData)
+                ? issueData
+                : [],
+          });
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setAiIssuesState({
+            projectId: String(projectId),
+            data: [],
+          });
+        }
+      });
+
     return () => {
       isMounted = false;
     };
   }, [projectId]);
 
   const visiblePosts = useMemo(() => {
-    const combined = [...localPosts, ...(projectId ? projectPosts : posts)];
-    return combined.filter((post) => {
+    return projectPosts.filter((post) => {
       const matchesFilter =
         activeFilter === "전체" || post.type === activeFilter;
       const matchesSearch =
@@ -1030,7 +1082,36 @@ export default function Home() {
         post.author.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesFilter && matchesSearch;
     });
-  }, [localPosts, projectId, projectPosts, activeFilter, searchQuery]);
+  }, [projectPosts, activeFilter, searchQuery]);
+
+  const refreshSummaryAfterReaction = async () => {
+    if (!projectId) return;
+
+    try {
+      const { data: result } = await api.get(
+        `/api/projects/${projectId}/summary`,
+      );
+      if (result?.isSuccess !== false && result?.data) {
+        setProjectSummary(result.data);
+      }
+    } catch {
+      // 반응은 정상 저장되었으므로 기존 진행률을 유지하고 다음 조회에서 갱신합니다.
+    }
+
+    try {
+      const { data: result } = await api.get(
+        `/api/projects/${projectId}/ai-progress`,
+      );
+      if (result?.isSuccess !== false) {
+        setAiProgressState({
+          projectId: String(projectId),
+          data: result?.data ?? null,
+        });
+      }
+    } catch {
+      // AI 진행률 재조회 실패 시 기존 값을 유지합니다.
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -1040,14 +1121,44 @@ export default function Home() {
         </div>
         <main className="min-w-0 flex-1 px-8 py-10">
           <div className="w-full">
-            <ProjectOverview
-              summary={projectSummary}
+            {projectId ? (
+              <>
+                <ProjectOverview
+              summary={
+                String(projectSummary?.id) === String(projectId)
+                  ? projectSummary
+                  : null
+              }
               teamName={teamName}
               teamIcon={teamIcon}
               projectTitle={projectTitle}
-              recentNotices={recentNoticeState.items}
-            />
-            <div className="mt-8 space-y-6">
+              recentNotices={
+                recentNoticeState.projectId === String(projectId)
+                  ? recentNoticeState.items
+                  : []
+              }
+              aiProgress={
+                aiProgressState.projectId === String(projectId)
+                  ? aiProgressState.data
+                  : null
+              }
+              totalPostCount={
+                postCountState.projectId === String(projectId)
+                  ? postCountState.count
+                  : 0
+              }
+              aiPriorities={
+                aiPrioritiesState.projectId === String(projectId)
+                  ? aiPrioritiesState.data
+                  : null
+              }
+              aiIssues={
+                aiIssuesState.projectId === String(projectId)
+                  ? aiIssuesState.data
+                  : []
+              }
+                />
+                <div className="mt-8 space-y-6">
               <BoardHeader
                 activeFilter={activeFilter}
                 onFilterChange={setActiveFilter}
@@ -1072,10 +1183,19 @@ export default function Home() {
                   <PostCard
                     key={post.id || post.detailId || `post-${index}`}
                     post={post}
+                    onReactionSaved={refreshSummaryAfterReaction}
                   />
                 ))}
               </div>
-            </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center">
+                <p className="text-gray-2">
+                  사이드바에서 프로젝트를 선택해주세요.
+                </p>
+              </div>
+            )}
           </div>
         </main>
       </div>
