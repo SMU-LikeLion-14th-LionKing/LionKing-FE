@@ -1,51 +1,3 @@
-<<<<<<< HEAD
-import Image from "next/image";
-import Link from "next/link";
-import Sidebar from "@/components/Sidebar/Sidebar";
-
-const NOTICES = [
-  {
-    id: 1,
-    title: "최종 발표 일정 변경 안내",
-    date: "2026.07.14(화) 18:00",
-    lines: [
-      "7/24 (목) 18:00 최종 발표",
-      "→ 7/22(화)까지 발표 자료 및 시연 영상 제출 부탁드립니다.",
-      "",
-      "+ 시연 영상 5분 이내",
-    ],
-  },
-  {
-    id: 2,
-    title: "7/14 회의 장소 변경 안내",
-    date: "2026.07.13(월) 13:00",
-    lines: [
-      "7/14(월) 회의 장소 변경되었습니다.",
-      "기존: 공학관 207 → 변경: 공학관 205",
-    ],
-  },
-  {
-    id: 3,
-    title: "API 명세서 공유 안내",
-    date: "2026.07.12(일) 19:20",
-    lines: [
-      "API 명세서 최신 버전 공유",
-      "7/14(월)까지 첨부된 내용 확인해주세요.",
-    ],
-  },
-  {
-    id: 4,
-    title: "다음주 일정 안내",
-    date: "2026.07.12(일) 09:40",
-    lines: [
-      "다음주 (7/15~7/18) 주요 일정 안내",
-      "ㆍ7/15(화): 중간 점검 회의",
-      "ㆍ7/16(수): 와이어프레임 최종 확인",
-      "ㆍ7/17(목)~7/18(금): 기능 구현 및 테스트",
-    ],
-  },
-];
-=======
 "use client";
 
 import Image from "next/image";
@@ -58,8 +10,7 @@ const PAGE_SIZE = 10;
 
 const subscribeToProjectSelection = (callback) => {
   window.addEventListener("team-selection-changed", callback);
-  return () =>
-    window.removeEventListener("team-selection-changed", callback);
+  return () => window.removeEventListener("team-selection-changed", callback);
 };
 const getSelectedProjectId = () =>
   sessionStorage.getItem("selected_project_id") || "";
@@ -87,7 +38,6 @@ function formatDate(value) {
     hour12: false,
   }).format(date);
 }
->>>>>>> origin/develop
 
 function NoticeCard({ notice }) {
   return (
@@ -95,15 +45,6 @@ function NoticeCard({ notice }) {
       <h3 className="text-[22px] font-semibold tracking-[-0.3px] text-gray-1">
         {notice.title}
       </h3>
-<<<<<<< HEAD
-      <div className="mt-2 text-sm leading-[1.45] text-gray-1">
-        {notice.lines.map((line, index) =>
-          line ? <p key={index}>{line}</p> : <div key={index} className="h-3" />,
-        )}
-      </div>
-      <time className="mt-3 block text-sm text-gray-1 sm:absolute sm:right-7 sm:top-5 sm:mt-0">
-        {notice.date}
-=======
       <p className="mt-2 whitespace-pre-wrap text-sm leading-[1.45] text-gray-1">
         {notice.content}
       </p>
@@ -112,15 +53,12 @@ function NoticeCard({ notice }) {
         className="mt-3 block text-sm text-gray-1 sm:absolute sm:right-7 sm:top-5 sm:mt-0"
       >
         {formatDate(notice.createdAt)}
->>>>>>> origin/develop
       </time>
     </article>
   );
 }
 
 export default function ProjectNoticesPage() {
-<<<<<<< HEAD
-=======
   const projectId = useSyncExternalStore(
     subscribeToProjectSelection,
     getSelectedProjectId,
@@ -189,7 +127,6 @@ export default function ProjectNoticesPage() {
     ? error
     : "공지사항을 확인할 프로젝트를 선택해주세요.";
 
->>>>>>> origin/develop
   return (
     <div className="flex min-h-screen bg-white">
       <Sidebar />
@@ -197,22 +134,9 @@ export default function ProjectNoticesPage() {
       <main className="min-w-0 flex-1 overflow-y-auto px-8 py-9">
         <section className="mx-auto w-full max-w-[1080px]">
           <header className="flex items-center gap-3">
-            <Image
-<<<<<<< HEAD
-              src="/icons/Sidebar/lion.svg"
-=======
-              src={teamIcon}
->>>>>>> origin/develop
-              alt=""
-              width={38}
-              height={38}
-            />
+            <Image src={teamIcon} alt="" width={38} height={38} />
             <h1 className="text-[32px] font-bold tracking-[-0.7px] text-gray-1">
-<<<<<<< HEAD
-              라이온킹
-=======
               {teamName}
->>>>>>> origin/develop
             </h1>
           </header>
 
@@ -234,13 +158,6 @@ export default function ProjectNoticesPage() {
             </div>
           </div>
 
-<<<<<<< HEAD
-          <div className="mt-7 space-y-2">
-            {NOTICES.map((notice) => (
-              <NoticeCard key={notice.id} notice={notice} />
-            ))}
-          </div>
-=======
           <div className="mt-7 space-y-2" aria-busy={loading}>
             {loading && (
               <p className="py-16 text-center text-gray-2">
@@ -293,7 +210,6 @@ export default function ProjectNoticesPage() {
               </button>
             </nav>
           )}
->>>>>>> origin/develop
         </section>
       </main>
     </div>

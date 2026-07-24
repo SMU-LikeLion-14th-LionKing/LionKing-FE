@@ -35,14 +35,12 @@ export function saveAuthTokens(authData, keepLoggedIn) {
   const previousUserId = getAuthStorage()?.getItem("user_id") ?? null;
   const nextUserId =
     authData.user_id === undefined ? null : String(authData.user_id);
-  if (previousUserId !== null && previousUserId !== nextUserId) {
+  if (previousUserId !== nextUserId) {
     PROJECT_SESSION_KEYS.forEach((key) => sessionStorage.removeItem(key));
   }
 
   clearAuthTokens();
-  const storage = keepLoggedIn
-    ? window.localStorage
-    : window.sessionStorage;
+  const storage = keepLoggedIn ? window.localStorage : window.sessionStorage;
 
   storage.setItem("access_token", authData.access_token);
   storage.setItem("refresh_token", authData.refresh_token);

@@ -3,15 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
-<<<<<<< HEAD
 import api from "@/lib/api";
-=======
->>>>>>> origin/develop
 
 export default function PasswordResetPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-<<<<<<< HEAD
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const hasEmail = email.trim() !== "";
@@ -25,10 +21,9 @@ export default function PasswordResetPage() {
     setError("");
 
     try {
-      const { data: result } = await api.post(
-        "/api/auth/password/send-code",
-        { email: normalizedEmail },
-      );
+      const { data: result } = await api.post("/api/auth/password/send-code", {
+        email: normalizedEmail,
+      });
       if (result?.isSuccess === false) {
         throw new Error(result.message || "인증코드 전송에 실패했습니다.");
       }
@@ -47,17 +42,6 @@ export default function PasswordResetPage() {
     } finally {
       setIsLoading(false);
     }
-=======
-  const hasEmail = email.trim() !== "";
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    if (!hasEmail) return;
-    sessionStorage.setItem("password_reset_email", email.trim());
-    router.push(
-      `/password-reset/verify?email=${encodeURIComponent(email.trim())}`,
-    );
->>>>>>> origin/develop
   };
 
   return (
@@ -78,17 +62,12 @@ export default function PasswordResetPage() {
             <span className="text-xs font-medium text-[#4e5968]">이메일</span>
             <input
               type="email"
-<<<<<<< HEAD
               required
               value={email}
               onChange={(event) => {
                 setEmail(event.target.value);
                 if (error) setError("");
               }}
-=======
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
->>>>>>> origin/develop
               placeholder="이메일을 입력하세요."
               autoComplete="email"
               className={`login-input h-[50px] w-full rounded-lg px-[23px] text-sm text-gray-1 outline-none placeholder:text-[#a8b0b9] transition-colors focus:ring-2 focus:ring-primary/30 ${
@@ -97,7 +76,6 @@ export default function PasswordResetPage() {
             />
           </label>
 
-<<<<<<< HEAD
           {error && (
             <p role="alert" className="mt-2 text-sm text-error">
               {error}
@@ -111,15 +89,6 @@ export default function PasswordResetPage() {
             className={`${error ? "mt-3" : "mt-7"} h-[46px] w-full rounded-lg text-sm`}
           >
             {isLoading ? "전송 중..." : "인증코드 받기"}
-=======
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={!hasEmail}
-            className="mt-7 h-[46px] w-full rounded-lg text-sm"
-          >
-            인증코드 받기
->>>>>>> origin/develop
           </Button>
         </form>
       </section>

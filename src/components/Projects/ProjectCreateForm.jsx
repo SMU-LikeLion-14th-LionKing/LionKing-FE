@@ -2,13 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-<<<<<<< HEAD
-=======
 import api from "@/lib/api";
 import DateTimePicker, {
   formatDateTime,
 } from "@/components/Posts/DateTimePicker";
->>>>>>> origin/develop
 
 const CATEGORIES = [
   "IT/소프트웨어",
@@ -59,12 +56,6 @@ export default function ProjectCreateForm() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-<<<<<<< HEAD
-    if (!isComplete) return;
-    router.push(
-      `/invite?team=${encodeURIComponent(form.teamName)}&project=${encodeURIComponent(form.projectName)}`,
-    );
-=======
     if (!isComplete || isLoading) return;
 
     setIsLoading(true);
@@ -147,7 +138,6 @@ export default function ProjectCreateForm() {
     } finally {
       setIsLoading(false);
     }
->>>>>>> origin/develop
   };
 
   return (

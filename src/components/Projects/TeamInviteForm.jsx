@@ -3,10 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-<<<<<<< HEAD
-=======
 import api from "@/lib/api";
->>>>>>> origin/develop
 
 function EmptyInviteList() {
   return (
@@ -45,15 +42,6 @@ export default function TeamInviteForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const teamName = searchParams.get("team") || "라이온킹";
-<<<<<<< HEAD
-  const [email, setEmail] = useState("");
-  const [invites, setInvites] = useState([]);
-  const [error, setError] = useState("");
-
-  const addInvite = () => {
-    const normalizedEmail = email.trim();
-    if (!normalizedEmail) return;
-=======
   const projectId =
     searchParams.get("projectId") ||
     (typeof window !== "undefined"
@@ -67,23 +55,10 @@ export default function TeamInviteForm() {
   const addInvite = async () => {
     const normalizedEmail = email.trim();
     if (!normalizedEmail || isLoading) return;
->>>>>>> origin/develop
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       setError("올바른 이메일을 입력해주세요.");
       return;
     }
-<<<<<<< HEAD
-    if (invites.includes(normalizedEmail)) {
-      setError("이미 초대 목록에 있는 이메일입니다.");
-      return;
-    }
-    setInvites((current) => [...current, normalizedEmail]);
-    setEmail("");
-    setError("");
-  };
-
-  const handleInviteClick = (event) => {
-=======
     if (invites.some((invite) => invite.email === normalizedEmail)) {
       setError("이미 초대 목록에 있는 이메일입니다.");
       return;
@@ -128,16 +103,11 @@ export default function TeamInviteForm() {
   };
 
   const handleInviteClick = async (event) => {
->>>>>>> origin/develop
     event.preventDefault();
     event.stopPropagation();
 
     if (!email.trim()) return;
-<<<<<<< HEAD
-    addInvite();
-=======
     await addInvite();
->>>>>>> origin/develop
   };
 
   return (
@@ -200,11 +170,7 @@ export default function TeamInviteForm() {
         <ul className="mt-6 flex-1 space-y-4 overflow-y-auto">
           {invites.map((invite) => (
             <li
-<<<<<<< HEAD
-              key={invite}
-=======
               key={invite.email}
->>>>>>> origin/develop
               className="flex min-h-12 items-center text-sm text-[#333d4b]"
             >
               <Image
@@ -214,11 +180,7 @@ export default function TeamInviteForm() {
                 height={40}
                 className="mr-6 shrink-0"
               />
-<<<<<<< HEAD
-              <span className="w-[165px] truncate">{invite}</span>
-=======
               <span className="w-[165px] truncate">{invite.email}</span>
->>>>>>> origin/develop
               <span className="ml-2 inline-flex h-[30px] min-w-[78px] items-center justify-center rounded-[7px] bg-[#fff4e6] px-3 text-xs font-semibold text-orange">
                 대기 중
               </span>
@@ -231,17 +193,10 @@ export default function TeamInviteForm() {
         <button
           type="button"
           onClick={handleInviteClick}
-<<<<<<< HEAD
-          disabled={!email.trim()}
-          className="h-14 w-32 rounded-[10px] bg-primary text-base font-semibold text-white transition hover:bg-secondary disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-3"
-        >
-          초대하기
-=======
           disabled={!email.trim() || isLoading}
           className="h-14 w-32 rounded-[10px] bg-primary text-base font-semibold text-white transition hover:bg-secondary disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-3"
         >
           {isLoading ? "초대 중..." : "초대하기"}
->>>>>>> origin/develop
         </button>
         <button
           type="button"

@@ -3,10 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
-<<<<<<< HEAD
 import api from "@/lib/api";
-=======
->>>>>>> origin/develop
 
 const CODE_LENGTH = 6;
 
@@ -14,10 +11,7 @@ export default function PasswordResetVerifyPage() {
   const router = useRouter();
   const [code, setCode] = useState(Array(CODE_LENGTH).fill(""));
   const [error, setError] = useState("");
-<<<<<<< HEAD
   const [isLoading, setIsLoading] = useState(false);
-=======
->>>>>>> origin/develop
   const inputRefs = useRef([]);
   const isComplete = code.every(Boolean);
 
@@ -62,7 +56,6 @@ export default function PasswordResetVerifyPage() {
     inputRefs.current[Math.min(pastedCode.length, CODE_LENGTH) - 1]?.focus();
   };
 
-<<<<<<< HEAD
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!isComplete || isLoading) return;
@@ -101,19 +94,6 @@ export default function PasswordResetVerifyPage() {
     } finally {
       setIsLoading(false);
     }
-=======
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    if (!isComplete) return;
-
-    if (code.join("") !== "111111") {
-      setError("인증코드가 일치하지 않습니다.");
-      return;
-    }
-
-    sessionStorage.setItem("password_reset_code", code.join(""));
-    router.push("/password-reset/new-password");
->>>>>>> origin/develop
   };
 
   return (
@@ -160,17 +140,10 @@ export default function PasswordResetVerifyPage() {
           <Button
             type="submit"
             variant="primary"
-<<<<<<< HEAD
             disabled={!isComplete || isLoading}
             className={`${error ? "mt-3" : "mt-7"} h-[42px] w-full rounded-lg text-sm`}
           >
             {isLoading ? "확인 중..." : "본인 확인 완료"}
-=======
-            disabled={!isComplete}
-            className={`${error ? "mt-3" : "mt-7"} h-[42px] w-full rounded-lg text-sm`}
-          >
-            본인 확인 완료
->>>>>>> origin/develop
           </Button>
         </form>
       </section>
