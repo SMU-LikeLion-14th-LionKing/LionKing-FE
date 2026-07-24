@@ -7,11 +7,6 @@ import Sidebar from "@/components/Sidebar/Sidebar";
 import DeadlineBadge from "@/components/common/DeadlineBadge";
 import api from "@/lib/api";
 import { parseApiDate } from "@/lib/date";
-import {
-  DEFAULT_PROFILE_JSON,
-  getProfileSnapshot,
-  subscribeToProfile,
-} from "@/lib/profileStorage";
 
 const svgIcons = {
   search: "/icons/main/search.svg",
@@ -24,72 +19,6 @@ const svgIcons = {
   crown: "/icons/main/crown.svg",
   comment: "/icons/main/comment.svg",
 };
-
-const posts = [
-  {
-    isExample: true,
-    type: "작업",
-    typeClass: "border-primary text-gray-1",
-    author: "김멋사",
-    initial: "김",
-    avatar: "bg-[#37bea1]",
-    time: "1시간 전",
-    title: "발표 PPT 1차 제작 완료",
-    description: [
-      "1~6페이지 제작",
-      "문제점 파트까지 작성",
-      "해결방안 파트는 미작성 (17일까지 완료 예정)",
-      "디자인 통일성 관련 피드백 부탁드립니다.",
-    ],
-    comments: 2,
-    content: "image",
-    imageUrl: "/images/work.png",
-    imageAlt: "JOBto-DO 발표 자료 미리보기",
-  },
-  {
-    isExample: true,
-    type: "질문",
-    typeClass: "border-orange text-gray-1",
-    author: "이땡땡",
-    initial: "이",
-    avatar: "bg-[#f36f83]",
-    time: "2시간 전",
-    title: "어떤 디자인이 더 좋을까요?",
-    description: [
-      "게시글 화면에 보이는 카드 디자인입니다.",
-      "어떤 디자인이 더 직관적이고 깔끔해보이나요?",
-      "첫 번째는 이미지 크게, 두 번째는 내용 위주로",
-      "구성했습니다. 내일 18:00까지 의견 부탁드립니다!",
-    ],
-    comments: 7,
-    content: "poll",
-    pollImages: [
-      {
-        id: 1,
-        imageUrl: "/images/placeholder.png",
-        imageAlt: "후보 1 이미지",
-      },
-      {
-        id: 2,
-        imageUrl: "/images/placeholder.png",
-        imageAlt: "후보 2 이미지",
-      },
-    ],
-  },
-  {
-    isExample: true,
-    type: "회의록",
-    typeClass: "border-green text-gray-1",
-    author: "김네모",
-    initial: "김",
-    avatar: "bg-[#9a7be4]",
-    time: "어제",
-    title: "7/6 서비스명 회의",
-    description: ["2차 회의 내용을 요약 정리합니다."],
-    comments: 1,
-    content: "meeting",
-  },
-];
 
 const CATEGORY_CLASS = {
   작업: "border-primary text-gray-1",
@@ -170,41 +99,6 @@ function normalizePostDetail(detail, summary) {
       imageAttachment?.id ??
       null,
     imageAlt: `${detail.title || summary.title} 첨부 이미지`,
-  };
-}
-
-function normalizeLocalPost(post, profile) {
-  const typeLabels = {
-    task: "작업",
-    question: "질문",
-    note: "회의록",
-  };
-  const type = typeLabels[post.type] || post.type || "게시글";
-  return {
-    id: `local-${post.id}`,
-    detailId: post.id,
-    type,
-    typeClass:
-      post.type === "task"
-        ? "border-primary text-gray-1"
-        : post.type === "question"
-          ? "border-orange text-gray-1"
-          : post.type === "note"
-            ? "border-green text-gray-1"
-            : "border-gray-3 text-gray-1",
-    author: profile.name,
-    initial: profile.name.trim().charAt(0),
-    profileImage: profile.image || "",
-    avatar: "bg-green",
-    time: formatRelativeTime(post.createdAt),
-    title: post.title,
-    description: post.content ? post.content.split(/\r?\n/) : [],
-    comments: 0,
-    reactionCount: 0,
-    content: post.vote ? "poll" : post.coverImage ? "image" : null,
-    imageUrl: post.coverImage || null,
-    imageAlt: `${post.title} 첨부 이미지`,
-    pollVote: post.vote || null,
   };
 }
 
@@ -332,6 +226,8 @@ function ProjectOverview({
   recentNotices,
   aiProgress,
   totalPostCount,
+  aiPriorities,
+  aiIssues,
 }) {
   const progressRate = Math.min(
     100,
@@ -399,16 +295,41 @@ function ProjectOverview({
           </div>
           <div className="mt-4 leading-[1.55]">
             <p className="font-semibold">이번 주 우선순위</p>
-            <p>
-              · 와이어프레임 완성
-              <br />· 백엔드 API 문서 확인
-            </p>
+            {typeof aiPriorities === "string" && aiPriorities.trim() ? (
+              <p className="whitespace-pre-line">{aiPriorities}</p>
+            ) : Array.isArray(aiPriorities) && aiPriorities.length > 0 ? (
+              <ul>
+                {aiPriorities.map((priority, index) => (
+                  <li key={priority.id ?? priority.priorityId ?? index}>
+                    · {priority.title ?? priority.content ?? String(priority)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-2">등록된 우선순위가 없습니다.</p>
+            )}
             <div className="my-3 border-t border-[#e5e8eb]" />
             <p className="font-semibold">최근 소통 이슈</p>
-            <p>
-              · 디자인 관련 질문 게시물이 3건 등록되었습니다.
-              <br />· 발표 자료 피드백 요청이 아직 확인되지 않았습니다.
-            </p>
+            {Array.isArray(aiIssues) && aiIssues.length > 0 ? (
+              <ul>
+                {aiIssues.map((issue, index) => (
+                  <li key={issue.id ?? issue.issueId ?? index}>
+                    ·{" "}
+                    {typeof issue === "string"
+                      ? issue
+                      : issue.title ??
+                        issue.content ??
+                        issue.message ??
+                        issue.summary ??
+                        "내용을 확인해주세요."}
+                  </li>
+                ))}
+              </ul>
+            ) : typeof aiIssues === "string" && aiIssues.trim() ? (
+              <p className="whitespace-pre-line">{aiIssues}</p>
+            ) : (
+              <p className="text-gray-2">발견된 소통 이슈가 없습니다.</p>
+            )}
           </div>
         </section>
 
@@ -900,16 +821,9 @@ function PostCard({ post, onReactionSaved }) {
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState("전체");
   const [searchQuery, setSearchQuery] = useState("");
-  const [localPosts, setLocalPosts] = useState([]);
   const [projectPosts, setProjectPosts] = useState([]);
   const [isPostsLoading, setIsPostsLoading] = useState(true);
   const [postsError, setPostsError] = useState("");
-  const profileSnapshot = useSyncExternalStore(
-    subscribeToProfile,
-    getProfileSnapshot,
-    () => DEFAULT_PROFILE_JSON,
-  );
-  const profile = useMemo(() => JSON.parse(profileSnapshot), [profileSnapshot]);
   const [projectSummary, setProjectSummary] = useState(null);
   const [recentNoticeState, setRecentNoticeState] = useState({
     projectId: "",
@@ -923,28 +837,19 @@ export default function Home() {
     projectId: "",
     count: 0,
   });
+  const [aiPrioritiesState, setAiPrioritiesState] = useState({
+    projectId: "",
+    data: null,
+  });
+  const [aiIssuesState, setAiIssuesState] = useState({
+    projectId: "",
+    data: [],
+  });
   const projectId = useSyncExternalStore(
     subscribeToProjectSelection,
     getSelectedProjectId,
     getServerProjectId,
   );
-
-  useEffect(() => {
-    try {
-      const storedPosts = JSON.parse(
-        localStorage.getItem("lionking-posts") ?? "[]",
-      );
-      // localStorage는 클라이언트 마운트 이후에만 읽어 hydration 차이를 방지합니다.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLocalPosts(
-        Array.isArray(storedPosts)
-          ? storedPosts.map((post) => normalizeLocalPost(post, profile))
-          : [],
-      );
-    } catch {
-      setLocalPosts([]);
-    }
-  }, [profile]);
 
   const teamName = useSyncExternalStore(
     subscribeToProjectSelection,
@@ -1117,14 +1022,58 @@ export default function Home() {
         }
       });
 
+    api
+      .get(`/api/projects/${projectId}/ai-priorities`)
+      .then((response) => {
+        const result = response.data;
+        if (isMounted && result?.isSuccess !== false) {
+          setAiPrioritiesState({
+            projectId: String(projectId),
+            data: result?.data ?? null,
+          });
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setAiPrioritiesState({
+            projectId: String(projectId),
+            data: null,
+          });
+        }
+      });
+
+    api
+      .get(`/api/projects/${projectId}/ai-issues`)
+      .then((response) => {
+        const result = response.data;
+        if (isMounted && result?.isSuccess !== false) {
+          const issueData = result?.data;
+          setAiIssuesState({
+            projectId: String(projectId),
+            data: Array.isArray(issueData?.issues)
+              ? issueData.issues
+              : typeof issueData === "string" || Array.isArray(issueData)
+                ? issueData
+                : [],
+          });
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setAiIssuesState({
+            projectId: String(projectId),
+            data: [],
+          });
+        }
+      });
+
     return () => {
       isMounted = false;
     };
   }, [projectId]);
 
   const visiblePosts = useMemo(() => {
-    const combined = projectId ? projectPosts : [...localPosts, ...posts];
-    return combined.filter((post) => {
+    return projectPosts.filter((post) => {
       const matchesFilter =
         activeFilter === "전체" || post.type === activeFilter;
       const matchesSearch =
@@ -1133,7 +1082,7 @@ export default function Home() {
         post.author.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesFilter && matchesSearch;
     });
-  }, [localPosts, projectId, projectPosts, activeFilter, searchQuery]);
+  }, [projectPosts, activeFilter, searchQuery]);
 
   const refreshSummaryAfterReaction = async () => {
     if (!projectId) return;
@@ -1172,7 +1121,9 @@ export default function Home() {
         </div>
         <main className="min-w-0 flex-1 px-8 py-10">
           <div className="w-full">
-            <ProjectOverview
+            {projectId ? (
+              <>
+                <ProjectOverview
               summary={
                 String(projectSummary?.id) === String(projectId)
                   ? projectSummary
@@ -1196,8 +1147,18 @@ export default function Home() {
                   ? postCountState.count
                   : 0
               }
-            />
-            <div className="mt-8 space-y-6">
+              aiPriorities={
+                aiPrioritiesState.projectId === String(projectId)
+                  ? aiPrioritiesState.data
+                  : null
+              }
+              aiIssues={
+                aiIssuesState.projectId === String(projectId)
+                  ? aiIssuesState.data
+                  : []
+              }
+                />
+                <div className="mt-8 space-y-6">
               <BoardHeader
                 activeFilter={activeFilter}
                 onFilterChange={setActiveFilter}
@@ -1226,7 +1187,15 @@ export default function Home() {
                   />
                 ))}
               </div>
-            </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center">
+                <p className="text-gray-2">
+                  사이드바에서 프로젝트를 선택해주세요.
+                </p>
+              </div>
+            )}
           </div>
         </main>
       </div>
