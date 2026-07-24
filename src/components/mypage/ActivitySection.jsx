@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import api from "@/lib/api";
+import { parseApiDate } from "@/lib/date";
 import ActivityCard from "./ActivityCard";
 
 const formatDate = (createdAt) => {
   if (!createdAt) return "";
 
-  const date = new Date(createdAt);
-  if (Number.isNaN(date.getTime())) return "";
+  const date = parseApiDate(createdAt);
+  if (!date) return "";
 
   const parts = new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
@@ -31,25 +32,158 @@ const ACTIVITY_TYPE_LABELS = {
   댓글: "댓글",
 };
 
+const subscribeToProject = (callback) => {
+  window.addEventListener("team-selection-changed", callback);
+  return () => window.removeEventListener("team-selection-changed", callback);
+};
+const getProjectIdSnapshot = () =>
+  sessionStorage.getItem("selected_project_id") || "";
+const getProjectNameSnapshot = () =>
+  sessionStorage.getItem("selected_team_name") || "";
+const getServerSnapshot = () => "";
+
+const isMyActivity = (author, user) => {
+  const authorId =
+    author?.userId ??
+    author?.user_id ??
+    author?.id;
+  const userId =
+    user?.userId ??
+    user?.user_id ??
+    user?.id;
+
+  if (authorId !== undefined && authorId !== null && userId !== undefined && userId !== null) {
+    return String(authorId) === String(userId);
+  }
+
+  return Boolean(author?.name && user?.name && author.name === user.name);
+};
+
 export default function ActivitySection() {
   const [activities, setActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const projectId = useSyncExternalStore(
+    subscribeToProject,
+    getProjectIdSnapshot,
+    getServerSnapshot,
+  );
+  const projectName = useSyncExternalStore(
+    subscribeToProject,
+    getProjectNameSnapshot,
+    getServerSnapshot,
+  );
 
   useEffect(() => {
     const controller = new AbortController();
 
     const fetchActivities = async () => {
-      try {
-        const { data: result } = await api.get("/api/users/me/activities", {
-          signal: controller.signal,
-        });
+      if (!projectId) {
+        setActivities([]);
+        setError("프로젝트를 먼저 선택해 주세요.");
+        setIsLoading(false);
+        return;
+      }
 
-        if (result?.isSuccess === false || !Array.isArray(result?.data?.content)) {
-          throw new Error(result?.message || "활동 목록을 불러오지 못했습니다.");
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const [{ data: userResult }, { data: postsResult }] = await Promise.all([
+          api.get("/api/users/me", { signal: controller.signal }),
+          api.get(`/api/projects/${projectId}/posts`, {
+            params: { page: 0, size: 100 },
+            signal: controller.signal,
+          }),
+        ]);
+
+        if (userResult?.isSuccess === false || !userResult?.data) {
+          throw new Error(
+            userResult?.message || "사용자 정보를 불러오지 못했습니다.",
+          );
         }
 
-        setActivities(result.data.content);
+        const posts = Array.isArray(postsResult?.data?.content)
+          ? postsResult.data.content
+          : Array.isArray(postsResult?.data)
+            ? postsResult.data
+            : [];
+
+        if (postsResult?.isSuccess === false) {
+          throw new Error(
+            postsResult?.message || "게시글 목록을 불러오지 못했습니다.",
+          );
+        }
+
+        const postActivities = posts
+          .filter((post) => isMyActivity(post.author, userResult.data))
+          .map((post) => ({
+            type: "게시글",
+            title: post.title || "제목 없는 게시글",
+            project_name: projectName,
+            created_at: post.createdAt || post.created_at,
+          }));
+
+        const commentGroups = await Promise.all(
+          posts.map(async (post) => {
+            const postId = post.postId ?? post.post_id ?? post.id;
+            if (postId === undefined || postId === null) return [];
+
+            try {
+              const { data: commentsResult } = await api.get(
+                `/api/posts/${postId}/comments`,
+                {
+                  params: { page: 0, size: 100 },
+                  signal: controller.signal,
+                },
+              );
+              if (commentsResult?.isSuccess === false) return [];
+
+              const comments = Array.isArray(commentsResult?.data?.content)
+                ? commentsResult.data.content
+                : Array.isArray(commentsResult?.data)
+                  ? commentsResult.data
+                  : [];
+
+              return comments
+                .filter((comment) =>
+                  isMyActivity(
+                    comment.author ||
+                      comment.user ||
+                      comment.writer || {
+                        userId: comment.userId ?? comment.user_id,
+                        name:
+                          comment.authorName ??
+                          comment.userName ??
+                          comment.writerName,
+                      },
+                    userResult.data,
+                  ),
+                )
+                .map((comment) => ({
+                  type: "댓글",
+                  title: comment.content || `${post.title}의 댓글`,
+                  project_name: projectName,
+                  created_at:
+                    comment.createdAt ||
+                    comment.created_at ||
+                    post.createdAt ||
+                    post.created_at,
+                }));
+            } catch (commentsError) {
+              if (commentsError.name === "CanceledError") throw commentsError;
+              return [];
+            }
+          }),
+        );
+
+        setActivities(
+          [...postActivities, ...commentGroups.flat()].sort(
+            (a, b) =>
+              new Date(b.created_at || 0).getTime() -
+              new Date(a.created_at || 0).getTime(),
+          ),
+        );
       } catch (requestError) {
         if (requestError.name !== "CanceledError") {
           setError(
@@ -65,7 +199,7 @@ export default function ActivitySection() {
 
     fetchActivities();
     return () => controller.abort();
-  }, []);
+  }, [projectId, projectName]);
 
   return (
     <section className="flex h-[526px] w-full max-w-[562px] flex-col rounded-2xl border border-gray-5 bg-white p-10">

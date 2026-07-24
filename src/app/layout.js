@@ -11,7 +11,7 @@ export default function RootLayout({ children }) {
     <html lang="ko" className="h-full antialiased">
       <body className="min-h-full bg-white">
         <NotificationProvider>
-          <div className="min-h-screen pl-50">{children}</div>
+          <div className="min-h-screen">{children}</div>
         </NotificationProvider>
       </body>
     </html>

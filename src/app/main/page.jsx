@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import DeadlineBadge from "@/components/common/DeadlineBadge";
 import api from "@/lib/api";
+import { parseApiDate } from "@/lib/date";
 import {
   DEFAULT_PROFILE_JSON,
   getProfileSnapshot,
@@ -103,7 +104,9 @@ const REACTION_TYPE_MAP = {
 
 function formatRelativeTime(value) {
   if (!value) return "";
-  const difference = Date.now() - new Date(value).getTime();
+  const date = parseApiDate(value);
+  if (!date) return "";
+  const difference = Date.now() - date.getTime();
   const minutes = Math.max(0, Math.floor(difference / 60000));
   if (minutes < 1) return "방금 전";
   if (minutes < 60) return `${minutes}분 전`;

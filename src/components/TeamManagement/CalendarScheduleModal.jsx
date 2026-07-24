@@ -152,6 +152,8 @@ export default function CalendarScheduleModal({ date, onClose, onAdd }) {
   const [defaultTimes] = useState(() => getDefaultScheduleTimes(date));
   const [startDate, setStartDate] = useState(() => new Date(defaultTimes.start));
   const [endDate, setEndDate] = useState(() => new Date(defaultTimes.end));
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const confirmDate = (nextDate) => {
     if (activePicker === "start") {
@@ -181,18 +183,30 @@ export default function CalendarScheduleModal({ date, onClose, onAdd }) {
     });
   };
 
-  const addSchedule = () => {
+  const addSchedule = async () => {
     const trimmedTitle = title.trim();
-    if (!trimmedTitle) return;
+    if (!trimmedTitle || isSubmitting) return;
 
-    onAdd({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      title: trimmedTitle,
-      type: scheduleType,
-      isAllDay,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-    });
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
+      await onAdd({
+        title: trimmedTitle,
+        type: scheduleType,
+        isAllDay,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+      });
+    } catch (error) {
+      setSubmitError(
+        error.response?.data?.message ||
+          error.message ||
+          "일정 등록에 실패했습니다.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -212,7 +226,8 @@ export default function CalendarScheduleModal({ date, onClose, onAdd }) {
           <div><p>시작</p><button type="button" onClick={() => setActivePicker("start")} className="mt-2 w-full rounded-xl bg-gray-4 px-4 py-3 text-left font-normal text-black transition hover:ring-2 hover:ring-primary">{formatScheduleDate(startDate)}</button></div>
           <div><p>종료</p><button type="button" disabled={isAllDay} onClick={() => setActivePicker("end")} className={`mt-2 w-full rounded-xl bg-gray-4 px-4 py-3 text-left font-normal text-black transition ${isAllDay ? "cursor-not-allowed" : "hover:ring-2 hover:ring-primary"}`}>{formatScheduleDate(endDate)}</button></div>
         </div>
-        <button type="button" onClick={addSchedule} disabled={!title.trim()} className={`mt-4 h-12 w-full rounded-xl text-base font-semibold transition ${title.trim() ? "bg-primary text-white hover:bg-secondary" : "cursor-not-allowed bg-gray-5 text-gray-3"}`}>일정 추가</button>
+        {submitError && <p role="alert" className="mt-3 text-sm font-medium text-error">{submitError}</p>}
+        <button type="button" onClick={addSchedule} disabled={!title.trim() || isSubmitting} className={`mt-4 h-12 w-full rounded-xl text-base font-semibold transition ${title.trim() && !isSubmitting ? "bg-primary text-white hover:bg-secondary" : "cursor-not-allowed bg-gray-5 text-gray-3"}`}>{isSubmitting ? "추가 중..." : "일정 추가"}</button>
       </div>
 
       {activePicker && (
