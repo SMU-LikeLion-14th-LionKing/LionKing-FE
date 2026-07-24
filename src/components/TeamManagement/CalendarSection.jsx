@@ -37,6 +37,18 @@ function startOfDay(date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+function normalizeCalendarEvent(event) {
+  return {
+    ...event,
+    schedule_id: event.schedule_id ?? event.scheduleId ?? event.id,
+    schedule_type:
+      event.schedule_type ?? event.scheduleType ?? event.event_type,
+    schedule_date:
+      event.schedule_date ?? event.scheduleDate ?? event.event_date,
+    deadline: event.deadline ?? event.end_date ?? event.endDate ?? null,
+  };
+}
+
 function getDateForCell(month, cell) {
   return new Date(month.getFullYear(), month.getMonth() + cell.monthOffset, cell.day);
 }
@@ -112,11 +124,31 @@ export default function CalendarSection() {
   const calendarDays = useMemo(() => getCalendarDays(currentMonth), [currentMonth]);
   const schedules = useMemo(() => {
     const eventsBySchedule = new Map();
+    const rangedSchedules = [];
+
     calendarEvents
-      .map((event) => ({ ...event, date: new Date(event.schedule_date) }))
+      .map((event) => ({
+        ...event,
+        date: new Date(event.schedule_date ?? event.event_date),
+        endDate: event.deadline ? new Date(event.deadline) : null,
+      }))
       .filter((event) => !Number.isNaN(event.date.getTime()))
       .forEach((event) => {
         const type = scheduleTypeLabels[event.schedule_type] || event.schedule_type;
+        if (event.endDate && !Number.isNaN(event.endDate.getTime())) {
+          rangedSchedules.push({
+            id: String(event.schedule_id),
+            eventIds: [event.schedule_id],
+            title: event.title,
+            type,
+            startDate: startOfDay(event.date),
+            endDate: startOfDay(
+              event.endDate < event.date ? event.date : event.endDate,
+            ),
+          });
+          return;
+        }
+
         const key = `${type}-${event.title}`;
         const events = eventsBySchedule.get(key) || [];
         events.push({ ...event, type });
@@ -153,7 +185,7 @@ export default function CalendarSection() {
       });
     });
 
-    return groupedSchedules;
+    return [...rangedSchedules, ...groupedSchedules];
   }, [calendarEvents]);
   const connectedSchedules = useMemo(
     () =>
@@ -209,7 +241,7 @@ export default function CalendarSection() {
           throw new Error(result?.message || "팀 일정을 불러오지 못했습니다.");
         }
 
-        setCalendarEvents(result.data);
+        setCalendarEvents(result.data.map(normalizeCalendarEvent));
       } catch (error) {
         if (error.name !== "CanceledError") {
           console.error("팀 일정 조회 실패:", error);
@@ -230,12 +262,14 @@ export default function CalendarSection() {
     }
 
     const eventDate = schedule.startDate.toISOString();
+    const deadline = schedule.endDate.toISOString();
     const { data: result } = await api.post(
       `/api/projects/${projectId}/calendar`,
       {
         event_type: schedule.type,
         title: schedule.title,
         event_date: eventDate,
+        deadline,
       },
     );
 
@@ -245,12 +279,13 @@ export default function CalendarSection() {
 
     setCalendarEvents((current) => [
       ...current,
-      {
-        schedule_id: result?.data?.schedule_id,
+      normalizeCalendarEvent({
+        ...(result?.data || {}),
         schedule_type: schedule.type,
         title: schedule.title,
         schedule_date: eventDate,
-      },
+        deadline,
+      }),
     ]);
     setSelectedDate(null);
   };
@@ -299,6 +334,8 @@ export default function CalendarSection() {
                 const row = Math.floor(segment.startIndex / 7);
                 const column = segment.startIndex % 7;
                 const daySpan = segment.endIndex - segment.startIndex + 1;
+                const leftInset = segment.continuesBefore ? 0 : 12;
+                const rightInset = segment.continuesAfter ? 0 : 12;
                 const isSingleDay = startOfDay(segment.startDate).getTime() === startOfDay(segment.endDate).getTime();
                 return (
                   <div
@@ -306,9 +343,9 @@ export default function CalendarSection() {
                     title={segment.title}
                     className={`absolute flex h-[22px] items-center justify-center truncate px-2 text-center text-xs font-medium ${scheduleTypeStyles[segment.type] ?? scheduleTypeStyles["작업"]} ${segment.continuesBefore ? "rounded-l-none" : "rounded-l"} ${segment.continuesAfter ? "rounded-r-none" : "rounded-r"}`}
                     style={{
-                      left: `${column * 144 + 12}px`,
+                      left: `${column * 144 + leftInset}px`,
                       top: `${row * 123 + 77 + (segment.lane % 2) * 24}px`,
-                      width: `${daySpan * 144 - 24}px`,
+                      width: `${daySpan * 144 - leftInset - rightInset}px`,
                     }}
                   >
                     <span className="min-w-0 truncate">{segment.title}</span>

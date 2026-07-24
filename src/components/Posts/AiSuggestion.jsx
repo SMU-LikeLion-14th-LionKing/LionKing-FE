@@ -18,7 +18,8 @@ export default function AiSuggestion({
   onApply,
 }) {
   const suggestion = suggestions[type];
-  const usesCollaborateManager = type === "task" || type === "question";
+  const usesCollaborateManager =
+    type === "task" || type === "question" || type === "comment";
   const usesMeetingMinutes = type === "note";
   const usesAiApi = usesCollaborateManager || usesMeetingMinutes;
   const [feedback, setFeedback] = useState(null);
